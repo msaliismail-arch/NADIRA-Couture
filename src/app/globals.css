@@ -1,0 +1,236 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-display);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  /* NADIRA brand tokens */
+  --color-emerald-deep: var(--emerald-deep);
+  --color-emerald: var(--emerald);
+  --color-emerald-soft: var(--emerald-soft);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+  --color-gold-light: var(--gold-light);
+  --color-ivory: var(--ivory);
+  --color-ivory-warm: var(--ivory-warm);
+  --color-rouge: var(--rouge);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.5rem;
+  /* NADIRA brand palette */
+  --emerald-deep: #082018;
+  --emerald: #0E3B2E;
+  --emerald-soft: #14543F;
+  --gold: #C9A24B;
+  --gold-deep: #A9842D;
+  --gold-light: #E3C879;
+  --ivory: #F4EDE0;
+  --ivory-warm: #FBF7EE;
+  --rouge: #7A1F1F;
+
+  /* Semantic mapping — luxury ivory theme by default */
+  --background: var(--ivory-warm);
+  --foreground: #1C2A24;
+  --card: #FFFFFF;
+  --card-foreground: #1C2A24;
+  --popover: #FFFFFF;
+  --popover-foreground: #1C2A24;
+  --primary: var(--emerald);
+  --primary-foreground: var(--ivory);
+  --secondary: var(--ivory);
+  --secondary-foreground: var(--emerald);
+  --muted: #EFE7D6;
+  --muted-foreground: #6B5F4D;
+  --accent: var(--emerald);
+  --accent-foreground: var(--gold-light);
+  --destructive: #B23A3A;
+  --border: #E2D8C4;
+  --input: #E8DEC8;
+  --ring: var(--gold);
+  --chart-1: var(--emerald);
+  --chart-2: var(--gold);
+  --chart-3: var(--gold-deep);
+  --chart-4: var(--emerald-soft);
+  --chart-5: var(--rouge);
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #1C2A24;
+  --sidebar-primary: var(--emerald);
+  --sidebar-primary-foreground: var(--ivory);
+  --sidebar-accent: var(--ivory);
+  --sidebar-accent-foreground: var(--emerald);
+  --sidebar-border: #E2D8C4;
+  --sidebar-ring: var(--gold);
+}
+
+.dark {
+  --background: var(--emerald-deep);
+  --foreground: var(--ivory);
+  --card: #0F2A20;
+  --card-foreground: var(--ivory);
+  --popover: #0F2A20;
+  --popover-foreground: var(--ivory);
+  --primary: var(--gold);
+  --primary-foreground: var(--emerald-deep);
+  --secondary: #123A2C;
+  --secondary-foreground: var(--ivory);
+  --muted: #123A2C;
+  --muted-foreground: #B8AE9A;
+  --accent: var(--gold);
+  --accent-foreground: var(--emerald-deep);
+  --destructive: #D45959;
+  --border: #1F4A38;
+  --input: #1F4A38;
+  --ring: var(--gold);
+  --sidebar: #0F2A20;
+  --sidebar-foreground: var(--ivory);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-body), Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display), Georgia, serif;
+  }
+}
+
+/* ===== NADIRA decorative utilities ===== */
+
+/* Velvet emerald surface with subtle sheen */
+.velvet {
+  background-color: var(--emerald);
+  background-image:
+    radial-gradient(ellipse at 30% 0%, rgba(227, 200, 121, 0.10), transparent 55%),
+    radial-gradient(ellipse at 80% 100%, rgba(8, 32, 24, 0.55), transparent 60%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.015) 0 2px, transparent 2px 4px);
+}
+.velvet-deep {
+  background-color: var(--emerald-deep);
+  background-image:
+    radial-gradient(ellipse at 50% -10%, rgba(227, 200, 121, 0.12), transparent 55%),
+    radial-gradient(ellipse at 0% 100%, rgba(20, 84, 63, 0.35), transparent 55%),
+    repeating-linear-gradient(135deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 4px);
+}
+
+/* Gold metallic text / accents */
+.text-gold-gradient {
+  background: linear-gradient(180deg, #F0DCA0 0%, #C9A24B 45%, #A9842D 75%, #E3C879 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.gold-line {
+  background: linear-gradient(90deg, transparent, var(--gold) 20%, var(--gold-light) 50%, var(--gold) 80%, transparent);
+}
+.gold-border {
+  border-image: linear-gradient(135deg, var(--gold-deep), var(--gold-light), var(--gold-deep)) 1;
+}
+
+/* Ivory paper texture */
+.paper {
+  background-color: var(--ivory-warm);
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(201,162,75,0.04), transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(14,59,46,0.03), transparent 40%);
+}
+
+/* Embroidery draw animation for the monogram */
+@keyframes draw-stitch {
+  to { stroke-dashoffset: 0; }
+}
+.embroider path, .embroider line, .embroider polyline {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: draw-stitch 2.4s ease forwards;
+}
+
+/* Slow shimmer for gold elements */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.gold-shimmer {
+  background: linear-gradient(100deg, var(--gold-deep) 0%, var(--gold-light) 45%, #FFF6DD 50%, var(--gold-light) 55%, var(--gold-deep) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 6s linear infinite;
+}
+
+/* Fade / reveal on scroll */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.reveal { opacity: 0; }
+.reveal.in-view { animation: fade-up 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+/* Custom scrollbar — emerald & gold */
+.nadira-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.nadira-scroll::-webkit-scrollbar-track { background: var(--ivory); }
+.nadira-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(var(--gold-deep), var(--gold));
+  border-radius: 8px;
+}
+
+/* Khatim (8-point star) slow rotation as a watermark */
+@keyframes khatim-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.khatim-spin { animation: khatim-spin 90s linear infinite; }
+
+/* Marquee for testimonials */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.marquee-track { animation: marquee 40s linear infinite; }
+.marquee-track:hover { animation-play-state: paused; }
+
+/* Hide number input spinners for measurement fields */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; }

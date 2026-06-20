@@ -1,0 +1,172 @@
+// NADIRA Couture — Prisma schema
+// Maison de couture marocaine haut de gamme
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Catégorie de produit : Caftan, Takchita, Djellaba, Accessoires...
+model Categorie {
+  id        Int      @id @default(autoincrement())
+  libelle   String   @unique
+  slug      String   @unique
+  ordre     Int      @default(0)
+  produits  Produit[]
+}
+
+/// Produit de la maison (caftan, takchita, djellaba, accessoire)
+model Produit {
+  id              Int       @id @default(autoincrement())
+  nom             String
+  slug            String    @unique
+  description     String
+  idCategorie     Int
+  categorie       Categorie @relation(fields: [idCategorie], references: [id])
+  prix            Float
+  tissu           String
+  couleurs        String    // liste séparée par virgules
+  delaiRealisation Int      @default(21) // en jours
+  occasion        String?   // mariage, soirée, cérémonie, quotidien
+  vedette         Boolean   @default(false) // mise en avant collection vedette
+  stock           Int       @default(1)
+  photos          String    // URLs séparées par virgules (première = couverture)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  ligneCommandes  LigneCommande[]
+  artisans        ProduitArtisan[]
+}
+
+/// Artisan / couturière / brodeuse de l'atelier
+model Artisan {
+  id          Int               @id @default(autoincrement())
+  nom         String
+  specialite  String            // broderie, coupe, assemblage, finitions
+  biographie  String?
+  photo       String?
+  ordre       Int               @default(0)
+  produits    ProduitArtisan[]
+}
+
+/// Table de liaison Produit <-> Artisan (réalisé_par)
+model ProduitArtisan {
+  idProduit  Int
+  idArtisan  Int
+  produit    Produit  @relation(fields: [idProduit], references: [id])
+  artisan    Artisan  @relation(fields: [idArtisan], references: [id])
+
+  @@id([idProduit, idArtisan])
+}
+
+/// Client de la maison
+model Client {
+  id              Int           @id @default(autoincrement())
+  nom             String
+  prenom          String
+  email           String?       // optionnel — la maison contacte par téléphone
+  telephone       String
+  adresse         String?
+  dateInscription DateTime      @default(now())
+  commandes       Commande[]
+  mesures         Mesure[]
+  rendezVous      RendezVous[]
+}
+
+/// Commande passée par un client
+model Commande {
+  id            Int             @id @default(autoincrement())
+  reference     String          @unique
+  idClient      Int
+  client        Client          @relation(fields: [idClient], references: [id])
+  dateCommande  DateTime        @default(now())
+  statut        String          @default("en_attente") // en_attente, en_confection, expediee, livree, annulee
+  montantTotal  Float
+  modePaiement  String          @default("atelier") // atelier, acompte, telephone
+  acompte       Float           @default(0)
+  notes         String?
+  dateRetrait   DateTime?
+  lignes        LigneCommande[]
+  avis          Avis[]
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+}
+
+/// Ligne de commande (produit + quantité + prix)
+model LigneCommande {
+  idCommande   Int
+  idProduit    Int
+  quantite     Int       @default(1)
+  prixUnitaire Float
+  surMesure    Boolean   @default(false)
+  taille       String?
+  couleur      String?
+  commande     Commande  @relation(fields: [idCommande], references: [id])
+  produit      Produit   @relation(fields: [idProduit], references: [id])
+
+  @@id([idCommande, idProduit])
+}
+
+/// Mesures corporelles du client (sur-mesure)
+model Mesure {
+  id             Int     @id @default(autoincrement())
+  idClient       Int
+  client         Client  @relation(fields: [idClient], references: [id])
+  tourPoitrine   Float?
+  tourTaille     Float?
+  tourHanches    Float?
+  longueurRobe   Float?
+  longueurManche Float?
+  longueurEpaule Float?
+  tourBras       Float?
+  notes          String?
+  created_at     DateTime @default(now())
+}
+
+/// Rendez-vous (essayage / consultation)
+model RendezVous {
+  id        Int      @id @default(autoincrement())
+  idClient  Int?
+  client    Client?  @relation(fields: [idClient], references: [id])
+  nom       String
+  telephone String
+  email     String?
+  dateRdv   DateTime
+  type      String   @default("essayage") // essayage, consultation
+  statut    String   @default("planifie") // planifie, confirme, refuse, termine
+  notes     String?
+  created_at DateTime @default(now())
+}
+
+/// Avis client (lié à une commande ou témoignage libre)
+model Avis {
+  id          Int      @id @default(autoincrement())
+  idCommande  Int?
+  commande    Commande? @relation(fields: [idCommande], references: [id])
+  note        Int      // 1 à 5
+  commentaire String
+  nomAuteur   String
+  dateAvis    DateTime @default(now())
+  approuve    Boolean  @default(false)
+}
+
+/// Administrateur de la maison
+model Administrateur {
+  id            Int      @id @default(autoincrement())
+  nom           String
+  email         String   @unique
+  motDePasseHash String
+  role          String   @default("admin") // admin, super_admin
+  dateCreation  DateTime @default(now())
+}
+
+/// Contenu éditorial modifiable (Notre Histoire, accroches, atelier...)
+model Contenu {
+  id      Int    @id @default(autoincrement())
+  cle     String @unique
+  valeur  String
+  updated_at DateTime @updatedAt
+}
