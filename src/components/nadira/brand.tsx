@@ -36,7 +36,7 @@ export function KhatimStar({
   );
 }
 
-/** Monogramme "N" doré brodé — version épurée pour header / hero / loader */
+/** Logo NADIRA — médaillon officiel (PNG transparent) utilisé partout */
 export function NadiraMonogram({
   className,
   animate = false,
@@ -45,149 +45,27 @@ export function NadiraMonogram({
   animate?: boolean;
 }) {
   return (
-    <svg
-      viewBox="0 0 120 120"
-      className={cn(animate && "embroider", className)}
-      fill="none"
-      aria-label="Monogramme NADIRA"
-      role="img"
-    >
-      <defs>
-        <linearGradient id="gold-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F0DCA0" />
-          <stop offset="45%" stopColor="#C9A24B" />
-          <stop offset="75%" stopColor="#A9842D" />
-          <stop offset="100%" stopColor="#E3C879" />
-        </linearGradient>
-      </defs>
-      {/* The "N" stitched in gold */}
-      <g
-        stroke="url(#gold-grad)"
-        strokeWidth="4.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        {/* Left vertical */}
-        <path d="M 38 26 L 38 94" />
-        {/* Diagonal */}
-        <path d="M 38 26 L 82 94" />
-        {/* Right vertical */}
-        <path d="M 82 26 L 82 94" />
-      </g>
-      {/* Needle + thread flourish */}
-      <g stroke="url(#gold-grad)" strokeWidth="1.6" strokeLinecap="round" opacity="0.85">
-        <path d="M 30 30 Q 22 50 30 70" />
-        <circle cx="29" cy="30" r="2.4" fill="url(#gold-grad)" stroke="none" />
-        <path d="M 90 86 Q 98 66 90 46" />
-        <circle cx="91" cy="86" r="2.4" fill="url(#gold-grad)" stroke="none" />
-      </g>
-      {/* Small khatim above */}
-      <g stroke="url(#gold-grad)" strokeWidth="1.4" opacity="0.7" transform="translate(50 8) scale(0.18)">
-        <rect x="0" y="0" width="100" height="100" />
-        <rect x="0" y="0" width="100" height="100" transform="rotate(45 50 50)" />
-      </g>
-    </svg>
+    <img
+      src="/nadira-logo.png"
+      alt="NADIRA Couture"
+      className={cn(
+        "object-contain",
+        animate && "animate-[fade-up_1.2s_ease_forwards]",
+        className
+      )}
+      style={animate ? { animation: "fade-up 1.2s ease forwards" } : undefined}
+    />
   );
 }
 
-/** Médaillon complet NADIRA — pour footer, sceaux, confirmation de commande */
+/** Médaillon complet NADIRA — logo officiel PNG (footer, sceaux, confirmation) */
 export function NadiraMedallion({ className }: { className?: string }) {
   return (
-    <svg
-      viewBox="0 0 240 240"
-      className={className}
-      fill="none"
-      aria-label="Sceau NADIRA Couture"
-      role="img"
-    >
-      <defs>
-        <radialGradient id="med-velvet" cx="50%" cy="38%" r="62%">
-          <stop offset="0%" stopColor="#14543F" />
-          <stop offset="60%" stopColor="#0E3B2E" />
-          <stop offset="100%" stopColor="#082018" />
-        </radialGradient>
-        <linearGradient id="med-gold" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#F0DCA0" />
-          <stop offset="45%" stopColor="#C9A24B" />
-          <stop offset="80%" stopColor="#A9842D" />
-          <stop offset="100%" stopColor="#E3C879" />
-        </linearGradient>
-      </defs>
-
-      {/* Outer ornate ring */}
-      <circle cx="120" cy="120" r="116" fill="url(#med-gold)" />
-      <circle cx="120" cy="120" r="110" fill="url(#med-velvet)" />
-
-      {/* Beaded inner border */}
-      <circle cx="120" cy="120" r="104" fill="none" stroke="url(#med-gold)" strokeWidth="1.5" />
-      <g fill="url(#med-gold)">
-        {Array.from({ length: 48 }).map((_, i) => {
-          const a = (i / 48) * Math.PI * 2;
-          const r = 99;
-          return (
-            <circle key={i} cx={120 + Math.cos(a) * r} cy={120 + Math.sin(a) * r} r="1.4" />
-          );
-        })}
-      </g>
-
-      {/* Decorative scalloped band */}
-      <g stroke="url(#med-gold)" strokeWidth="1.2" fill="none" opacity="0.9">
-        <circle cx="120" cy="120" r="92" />
-        {Array.from({ length: 16 }).map((_, i) => {
-          const a = (i / 16) * Math.PI * 2;
-          const r = 86;
-          return (
-            <circle
-              key={i}
-              cx={120 + Math.cos(a) * r}
-              cy={120 + Math.sin(a) * r}
-              r="5"
-            />
-          );
-        })}
-      </g>
-
-      {/* Cardinal ornaments (top/bottom/left/right) */}
-      <g fill="url(#med-gold)" opacity="0.95">
-        <KhatimOrnament cx={120} cy={36} scale={0.5} />
-        <KhatimOrnament cx={120} cy={204} scale={0.5} />
-        <KhatimOrnament cx={36} cy={120} scale={0.5} />
-        <KhatimOrnament cx={204} cy={120} scale={0.5} />
-      </g>
-
-      {/* Monogram N (central) */}
-      <g
-        stroke="url(#med-gold)"
-        strokeWidth="7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      >
-        <path d="M 92 78 L 92 162" />
-        <path d="M 92 78 L 148 162" />
-        <path d="M 148 78 L 148 162" />
-      </g>
-
-      {/* Wordmark NADIRA */}
-      <g fill="url(#med-gold)" fontFamily="var(--font-display), Georgia, serif" fontWeight="600">
-        <text
-          x="120"
-          y="178"
-          textAnchor="middle"
-          fontSize="15"
-          letterSpacing="3"
-        >
-          NADIRA
-        </text>
-      </g>
-      {/* Tiny separator line under wordmark */}
-      <g stroke="url(#med-gold)" strokeWidth="1">
-        <line x1="92" y1="186" x2="148" y2="186" />
-      </g>
-      <g fill="url(#med-gold)">
-        <rect x="116" y="184" width="8" height="4" transform="rotate(45 120 186)" />
-      </g>
-    </svg>
+    <img
+      src="/nadira-logo.png"
+      alt="NADIRA Couture"
+      className={cn("object-contain", className)}
+    />
   );
 }
 

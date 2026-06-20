@@ -69,7 +69,7 @@ export function Header() {
             aria-label="NADIRA Couture — accueil"
           >
             <img
-              src="/nadira-logo-v2.png"
+              src="/nadira-logo.png"
               alt="NADIRA Couture"
               className="h-12 sm:h-14 w-auto object-contain"
             />
