@@ -45,6 +45,9 @@ export function CollectionsView() {
   const [produits, setProduits] = useState<Produit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Pagination: show products in batches to avoid rendering everything at once
+  const PAGE_SIZE = 8;
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   // Sheet local state (drafts filters; commits on Apply)
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -72,6 +75,7 @@ export function CollectionsView() {
       if (cancelled) return;
       setLoading(true);
       setError(null);
+      setVisibleCount(PAGE_SIZE); // Reset pagination when filters change
     });
     const params = new URLSearchParams();
     if (filters.categorie) params.set("categorie", filters.categorie);
@@ -379,20 +383,38 @@ export function CollectionsView() {
               onReset={resetAll}
             />
           ) : (
-            <div
-              ref={gridRef}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-            >
-              {filteredProduits.map((p, idx) => (
-                <ProductCard
-                  key={p.id}
-                  produit={p}
-                  onClick={() => openProduit(p.slug)}
-                  delay={idx * 60}
-                  visible={gridVisible}
-                />
-              ))}
-            </div>
+            <>
+              <div
+                ref={gridRef}
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              >
+                {filteredProduits.slice(0, visibleCount).map((p, idx) => (
+                  <ProductCard
+                    key={p.id}
+                    produit={p}
+                    onClick={() => openProduit(p.slug)}
+                    delay={idx * 60}
+                    visible={gridVisible}
+                  />
+                ))}
+              </div>
+              {/* Load More button */}
+              {filteredProduits.length > visibleCount && (
+                <div className="flex flex-col items-center mt-12">
+                  <button
+                    onClick={() =>
+                      setVisibleCount((c) => c + PAGE_SIZE)
+                    }
+                    className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/5 px-8 py-3 text-sm uppercase tracking-[0.2em] text-emerald-deep hover:bg-gold/15 hover:border-gold/60 transition-colors"
+                  >
+                    Charger plus
+                    <span className="text-xs text-muted-foreground normal-case tracking-normal">
+                      ({filteredProduits.length - visibleCount} restantes)
+                    </span>
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
@@ -442,10 +464,11 @@ function ProductCard({
   return (
     <article
       onClick={onClick}
-      className={`group cursor-pointer ${visible ? "reveal in-view" : "reveal"}`}
+      className="group cursor-pointer"
       style={{
-        transitionDelay: `${delay}ms`,
+        animation: "fade-up 0.6s ease forwards",
         animationDelay: `${delay}ms`,
+        opacity: 0,
       }}
     >
       <div className="relative overflow-hidden rounded-lg gold-border aspect-[3/4] bg-muted">

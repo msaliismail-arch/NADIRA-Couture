@@ -543,3 +543,46 @@ Stage Summary:
 - The browser no longer needs to parse a 3.7k-line module in one go; each section compiles independently when first visited.
 - All admin functionality (login, dashboard KPIs + chart, produits CRUD, commandes filter + detail + manual order dialog with mesures, rendez-vous confirm/refuse, mesures viewer, avis moderation, galerie upload, artisans CRUD, contenu éditorial editor) is preserved 1:1.
 - Main agent can now perform browser testing — admin pages should load without OOM.
+
+---
+Task ID: admin-features
+Agent: main
+Task: Admin product features — image upload, Load More pagination, permanent delete, edit confirmation
+
+Work Log:
+1. Image upload (product form):
+   - Replaced the text-only "Photos (URLs)" input with a full image upload component.
+   - Added "Téléverser des images" button with `<input type="file" accept="image/*" multiple capture="environment">` — works on PC and mobile (camera + gallery).
+   - Files are uploaded via POST /api/upload (admin-only, multipart FormData), returns {url}.
+   - Preview thumbnails (80x80) with hover-remove (X button), first photo labeled "Couverture".
+   - Collapsible "Ou saisir les URLs manuellement" section for advanced users.
+   - Upload state: "Upload en cours..." with disabled button, toast feedback.
+2. "Charger plus" (Load More) pagination:
+   - Added PAGE_SIZE=8 and visibleCount state to CollectionsView.
+   - Grid now shows filteredProduits.slice(0, visibleCount).
+   - "Charger plus" button appears when filteredProduits.length > visibleCount, shows "(N restantes)".
+   - Clicking it increments visibleCount by PAGE_SIZE. Button disappears when all loaded.
+   - visibleCount resets to PAGE_SIZE when filters change (no stale pagination).
+   - Fixed ProductCard reveal bug: replaced the reveal/opacity:0 pattern (which hid products when IntersectionObserver didn't fire) with a simple CSS fade-up animation that always plays.
+   - Verified: 8 products show initially, "Charger plus (2 restantes)" button, clicking loads all 10, button disappears. No incorrect elements across products.
+3. Permanent delete (no ghost/caching):
+   - DELETE /api/produits/[slug] now deletes related ProduitArtisan + LigneCommande records first (avoids FK constraint errors), then the product.
+   - Added Cache-Control: no-store headers to DELETE response and GET /api/produits response.
+   - Added cache: "no-store" to client-side api() helper — always fetches fresh data.
+   - Admin client calls load() after delete to refetch from server.
+   - Verified via curl: created "Test Delete" product, deleted it, confirmed 404 on direct access, not in product list.
+4. Edit confirmation:
+   - Added editConfirmOpen state to ProduitFormDialog.
+   - When editing (produit != null) and user clicks "Enregistrer", an AlertDialog "Confirmer la modification?" appears with "Annuler" / "Oui, enregistrer" buttons.
+   - Only on confirmation does the PUT request fire.
+   - Delete already had confirmation (AlertDialog "Supprimer ce produit?").
+   - Both edit and delete now require explicit confirmation before applying.
+
+Stage Summary:
+- All 4 requirements implemented and verified:
+  1. Image upload from PC/phone with preview + remove ✓
+  2. "Charger plus" pagination — no rendering bugs ✓
+  3. Permanent delete — no ghost/caching ✓
+  4. Edit + delete confirmation popups ✓
+- Lint: 0 errors, 0 warnings.
+- Admin credentials: admin@nadira-couture.ma / Nadira@2024

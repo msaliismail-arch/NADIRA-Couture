@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/table";
 
 // lucide
-import { Plus, Edit, Trash2, Search } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Upload, X } from "lucide-react";
 
 // sonner
 import { toast } from "sonner";
@@ -105,8 +105,9 @@ export function ProduitsSection() {
       await adminApi(`/api/produits/${deleteTarget.slug}`, {
         method: "DELETE",
       });
-      toast.success("Produit supprimé");
+      toast.success("Produit supprimé définitivement");
       setDeleteTarget(null);
+      // Force a fresh fetch from the server to ensure no ghost/cached data
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
@@ -303,6 +304,8 @@ function ProduitFormDialog({
     datePiece: "",
   });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [editConfirmOpen, setEditConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (produit) {
@@ -374,6 +377,12 @@ function ProduitFormDialog({
       toast.error("Tous les champs requis doivent être remplis");
       return;
     }
+    // If editing an existing product, ask for confirmation first
+    if (produit && !editConfirmOpen) {
+      setEditConfirmOpen(true);
+      return;
+    }
+    setEditConfirmOpen(false);
     setSaving(true);
     const numOrNullOrUndef = (v: string): number | null => {
       if (v === "") return null;
@@ -425,6 +434,63 @@ function ProduitFormDialog({
     } finally {
       setSaving(false);
     }
+  }
+
+  // Upload image files to /api/upload and append URLs to form.photos
+  async function handleFileUpload(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    const token = typeof window !== "undefined" ? localStorage.getItem("nadira-admin-token") : null;
+    const newUrls: string[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        // Validate type
+        if (!file.type.startsWith("image/")) {
+          toast.error(`"${file.name}" n'est pas une image`);
+          continue;
+        }
+        // Validate size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`"${file.name}" dépasse 10 Mo`);
+          continue;
+        }
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+          body: fd,
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          toast.error(data.error || `Échec upload de "${file.name}"`);
+          continue;
+        }
+        const data = await res.json();
+        newUrls.push(data.url);
+      }
+      if (newUrls.length > 0) {
+        const existing = form.photos
+          ? form.photos.split(",").map((s) => s.trim()).filter(Boolean)
+          : [];
+        const combined = [...existing, ...newUrls].join(",");
+        setForm({ ...form, photos: combined });
+        toast.success(`${newUrls.length} image(s) ajoutée(s)`);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur upload");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  // Remove a single photo from the photos list by index
+  function removePhoto(index: number) {
+    const photos = form.photos
+      ? form.photos.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+    photos.splice(index, 1);
+    setForm({ ...form, photos: photos.join(",") });
   }
 
   return (
@@ -536,12 +602,78 @@ function ProduitFormDialog({
             />
           </div>
           <div className="space-y-1.5 md:col-span-2">
-            <Label>Photos (URLs séparées par virgules) *</Label>
-            <Input
-              value={form.photos}
-              onChange={(e) => setForm({ ...form, photos: e.target.value })}
-              placeholder="/images/caftan-1.jpg,/images/caftan-2.jpg"
-            />
+            <Label>Photos du produit *</Label>
+            {/* Upload button — works on PC and mobile (camera + gallery) */}
+            <div className="flex flex-wrap gap-3 items-center">
+              <label className="inline-flex items-center gap-2 cursor-pointer rounded-lg border-2 border-dashed border-gold/40 bg-gold/5 px-4 py-3 text-sm text-emerald-deep hover:bg-gold/10 hover:border-gold/60 transition-colors">
+                <Upload className="w-4 h-4" />
+                {uploading ? "Upload en cours..." : "Téléverser des images"}
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  capture="environment"
+                  className="hidden"
+                  onChange={(e) => {
+                    handleFileUpload(e.target.files);
+                    e.target.value = "";
+                  }}
+                  disabled={uploading}
+                />
+              </label>
+              <span className="text-xs text-muted-foreground">
+                Depuis votre appareil (galerie ou appareil photo)
+              </span>
+            </div>
+            {/* Preview thumbnails */}
+            {form.photos && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {form.photos
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                  .map((url, i) => (
+                    <div
+                      key={i}
+                      className="relative w-20 h-20 rounded-md overflow-hidden border border-border group"
+                    >
+                      <img
+                        src={url}
+                        alt={`Photo ${i + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).style.opacity = "0.2";
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removePhoto(i)}
+                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        aria-label="Supprimer cette photo"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                      {i === 0 && (
+                        <span className="absolute bottom-0 left-0 right-0 bg-emerald-deep/80 text-ivory text-[8px] text-center py-0.5">
+                          Couverture
+                        </span>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            )}
+            {/* Manual URL input (advanced) */}
+            <details className="mt-2">
+              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+                Ou saisir les URLs manuellement
+              </summary>
+              <Input
+                value={form.photos}
+                onChange={(e) => setForm({ ...form, photos: e.target.value })}
+                placeholder="/images/caftan-1.jpg,/images/caftan-2.jpg"
+                className="mt-2"
+              />
+            </details>
           </div>
           <div className="md:col-span-2 flex items-center gap-3">
             <Switch
@@ -658,12 +790,46 @@ function ProduitFormDialog({
           </Button>
           <Button
             onClick={save}
-            disabled={saving}
+            disabled={saving || uploading}
             className="bg-emerald hover:bg-emerald-deep text-ivory"
           >
-            {saving ? "Enregistrement..." : "Enregistrer"}
+            {saving
+              ? "Enregistrement..."
+              : uploading
+              ? "Upload..."
+              : produit
+              ? "Enregistrer les modifications"
+              : "Créer le produit"}
           </Button>
         </DialogFooter>
+
+        {/* Edit confirmation dialog */}
+        <AlertDialog
+          open={editConfirmOpen}
+          onOpenChange={setEditConfirmOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                Confirmer la modification ?
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                Vous êtes sur le point de modifier le produit
+                « {produit?.nom} ». Cette action remplacera les informations
+                actuelles. Voulez-vous continuer ?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Annuler</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={save}
+                className="bg-emerald hover:bg-emerald-deep text-ivory"
+              >
+                Oui, enregistrer
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </DialogContent>
     </Dialog>
   );

@@ -163,8 +163,19 @@ export async function DELETE(req: NextRequest, { params }: Params) {
         { status: 404 }
       );
     }
+    // Delete related records first to avoid foreign key constraint errors,
+    // then permanently delete the product (no caching/ghost data).
+    await db.produitArtisan.deleteMany({
+      where: { idProduit: existing.id },
+    });
+    await db.ligneCommande.deleteMany({
+      where: { idProduit: existing.id },
+    });
     await db.produit.delete({ where: { id: existing.id } });
-    return NextResponse.json({ success: true });
+    return NextResponse.json(
+      { success: true },
+      { headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+    );
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Erreur serveur" },

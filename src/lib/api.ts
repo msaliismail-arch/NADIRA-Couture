@@ -8,6 +8,7 @@ export async function api<T = unknown>(
   init?: RequestInit
 ): Promise<T> {
   const res = await fetch(path, {
+    cache: "no-store", // Always fetch fresh data — no ghost/cached products after delete
     ...init,
     headers: {
       "Content-Type": "application/json",

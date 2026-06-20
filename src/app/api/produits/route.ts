@@ -36,7 +36,9 @@ export async function GET(req: NextRequest) {
       include: { categorie: true },
       orderBy: { created_at: "desc" },
     });
-    return NextResponse.json(produits);
+    return NextResponse.json(produits, {
+      headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Erreur serveur" },
