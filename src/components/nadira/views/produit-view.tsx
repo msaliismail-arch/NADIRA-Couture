@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { api, formatMAD } from "@/lib/api";
+import { api, formatMAD, formatDate } from "@/lib/api";
 import type { Produit, Categorie, Artisan } from "@/lib/types";
 import { NadiraMonogram, GoldDivider, KhatimStar } from "@/components/nadira/brand";
 import { useReveal } from "@/hooks/use-reveal";
@@ -222,7 +222,7 @@ function ProduitViewInner({ slug }: { slug: string }) {
                   {produit.description}
                 </p>
 
-                {/* Fabric + delay + stock */}
+                {/* Fabric + delay + stock + date */}
                 <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
                   <DetailLine label="Tissu" value={produit.tissu} />
                   <DetailLine
@@ -241,7 +241,16 @@ function ProduitViewInner({ slug }: { slug: string }) {
                     label="Référence"
                     value={`#${produit.id.toString().padStart(4, "0")}`}
                   />
+                  {produit.datePiece && (
+                    <DetailLine
+                      label="Date de la pièce"
+                      value={formatDate(produit.datePiece)}
+                    />
+                  )}
                 </div>
+
+                {/* Dimensions */}
+                <DimensionsBlock produit={produit} />
 
                 {/* Colors */}
                 <ColorPicker
@@ -480,6 +489,54 @@ function DetailLine({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="text-sm text-emerald-deep font-medium">{value}</p>
+    </div>
+  );
+}
+
+/** Dimensions block — only renders when at least one measurement or
+ *  the free-text "autreDimensions" is present. Shows available numeric
+ *  dimensions in a 2-column grid with French labels + cm suffix.
+ */
+function DimensionsBlock({ produit }: { produit: Produit }) {
+  const dims: { label: string; value: number | null }[] = [
+    { label: "Longueur", value: produit.longueur },
+    { label: "Largeur", value: produit.largeur },
+    { label: "Tour de poitrine", value: produit.tourPoitrine },
+    { label: "Tour de taille", value: produit.tourTaille },
+    { label: "Tour de hanches", value: produit.tourHanches },
+    { label: "Longueur manche", value: produit.longueurManche },
+  ];
+  const available = dims.filter((d) => d.value != null);
+  if (available.length === 0 && !produit.autreDimensions) return null;
+  return (
+    <div className="mb-6">
+      <p className="text-xs uppercase tracking-[0.2em] text-gold-deep mb-3 flex items-center gap-2">
+        <Ruler className="h-3.5 w-3.5" />
+        Dimensions
+      </p>
+      {available.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          {available.map((d) => (
+            <div
+              key={d.label}
+              className="rounded-lg border border-gold/20 bg-card/40 px-3 py-2.5"
+            >
+              <p className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-0.5">
+                {d.label}
+              </p>
+              <p className="text-sm text-emerald-deep font-medium">
+                {d.value}
+                <span className="ml-1 text-xs text-gold-deep">cm</span>
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+      {produit.autreDimensions && (
+        <p className="mt-3 text-xs text-muted-foreground italic leading-relaxed">
+          {produit.autreDimensions}
+        </p>
+      )}
     </div>
   );
 }
@@ -947,12 +1004,6 @@ function OrderDialog({
                 {submitError}
               </p>
             )}
-
-            {/* No payment note */}
-            <div className="rounded-lg bg-emerald-deep/5 border border-emerald/15 px-4 py-3 text-xs text-emerald-deep text-center leading-relaxed">
-              Aucun paiement en ligne — le règlement se fait directement avec
-              notre équipe par téléphone ou à l'atelier.
-            </div>
 
             <DialogFooter className="flex-row gap-2">
               <Button

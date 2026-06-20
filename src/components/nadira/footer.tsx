@@ -2,7 +2,7 @@
 
 import { useStore } from "@/lib/store";
 import { NadiraMedallion, GoldDivider, KhatimStar } from "./brand";
-import { Instagram, Facebook, Phone, Mail, MapPin, MessageCircle } from "lucide-react";
+import { Instagram, Mail, MapPin } from "lucide-react";
 
 export function Footer({ contenu }: { contenu: Record<string, string> }) {
   const { setView } = useStore();
@@ -63,22 +63,34 @@ export function Footer({ contenu }: { contenu: Record<string, string> }) {
             <ul className="space-y-3 text-sm text-ivory/75">
               <li className="flex gap-2.5">
                 <MapPin className="h-4 w-4 text-gold mt-0.5 shrink-0" />
-                <span>{contenu.contact_adresse}</span>
-              </li>
-              <li className="flex gap-2.5">
-                <Phone className="h-4 w-4 text-gold mt-0.5 shrink-0" />
-                <a href={`tel:${contenu.contact_telephone}`} className="hover:text-gold-light">
-                  {contenu.contact_telephone}
-                </a>
-              </li>
-              <li className="flex gap-2.5">
-                <MessageCircle className="h-4 w-4 text-gold mt-0.5 shrink-0" />
-                <span>WhatsApp : {contenu.contact_whatsapp}</span>
+                {contenu.contact_maps ? (
+                  <a
+                    href={contenu.contact_maps}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-gold-light transition-colors"
+                  >
+                    {contenu.contact_adresse}
+                  </a>
+                ) : (
+                  <span>{contenu.contact_adresse}</span>
+                )}
               </li>
               <li className="flex gap-2.5">
                 <Mail className="h-4 w-4 text-gold mt-0.5 shrink-0" />
-                <a href={`mailto:${contenu.contact_email}`} className="hover:text-gold-light">
+                <a href={`mailto:${contenu.contact_email}`} className="hover:text-gold-light transition-colors">
                   {contenu.contact_email}
+                </a>
+              </li>
+              <li className="flex gap-2.5">
+                <Instagram className="h-4 w-4 text-gold mt-0.5 shrink-0" />
+                <a
+                  href={contenu.reseaux_instagram}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-gold-light transition-colors"
+                >
+                  @couture_nadira
                 </a>
               </li>
             </ul>
@@ -99,15 +111,6 @@ export function Footer({ contenu }: { contenu: Record<string, string> }) {
                 aria-label="Instagram"
               >
                 <Instagram className="h-4 w-4" />
-              </a>
-              <a
-                href={contenu.reseaux_facebook}
-                target="_blank"
-                rel="noreferrer"
-                className="h-9 w-9 rounded-full border border-gold/30 flex items-center justify-center text-gold-light hover:bg-gold/15 transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="h-4 w-4" />
               </a>
             </div>
           </div>

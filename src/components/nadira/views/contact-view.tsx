@@ -2,13 +2,11 @@
 
 import { useState } from "react";
 import {
-  Phone,
   Mail,
   MapPin,
-  MessageCircle,
   Clock,
   Instagram,
-  Facebook,
+  Phone,
   Check,
   ArrowRight,
   User,
@@ -44,13 +42,11 @@ function isValidPhone(tel: string) {
 export function ContactView({ contenu }: { contenu: Record<string, string> }) {
   const { setView } = useStore();
 
-  const adresse = contenu.contact_adresse || "12 Derb Sidi Bouamar, Médina, Fès, Maroc";
-  const telephone = contenu.contact_telephone || "+212 5 35 63 42 18";
-  const whatsapp = contenu.contact_whatsapp || "+212 6 12 34 56 78";
-  const email = contenu.contact_email || "atelier@nadira-couture.ma";
-  const horaires = contenu.contact_horaires || "Lun — Sam · 9h30 — 18h30";
-  const instagram = contenu.contact_instagram || "https://instagram.com/nadira.couture";
-  const facebook = contenu.contact_facebook || "https://facebook.com/nadira.couture";
+  const adresse = contenu.contact_adresse || "Quartier Salam, Agadir";
+  const email = contenu.contact_email || "couture.nadira2026@gmail.com";
+  const horaires = contenu.contact_horaires || "Tous les jours, toute l'année · 10h00–23h00";
+  const instagram = contenu.reseaux_instagram || "https://www.instagram.com/couture_nadira";
+  const mapsLink = contenu.contact_maps || "https://maps.apple/p/osTsur6u9BnDAr";
 
   // Form state
   const [nom, setNom] = useState("");
@@ -109,10 +105,7 @@ export function ContactView({ contenu }: { contenu: Record<string, string> }) {
     }
   };
 
-  const waLink = `https://wa.me/${whatsapp.replace(/[^\d]/g, "")}`;
-  const telLink = `tel:${telephone.replace(/\s/g, "")}`;
   const mailLink = `mailto:${email}`;
-  const mapsLink = `https://maps.google.com/?q=${encodeURIComponent(adresse)}`;
 
   return (
     <div className="bg-background">
@@ -122,14 +115,10 @@ export function ContactView({ contenu }: { contenu: Record<string, string> }) {
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 grid gap-10 lg:grid-cols-2">
           <ContactInfo
             adresse={adresse}
-            telephone={telephone}
-            whatsapp={whatsapp}
             email={email}
             horaires={horaires}
             instagram={instagram}
-            facebook={facebook}
-            telLink={telLink}
-            waLink={waLink}
+            mapsLink={mapsLink}
             mailLink={mailLink}
           />
 
@@ -190,7 +179,7 @@ function Hero() {
           Contact &amp; Boutique
         </h1>
         <p className="mt-4 font-serif-alt text-2xl sm:text-3xl text-ivory/90 italic">
-          Notre atelier vous accueille au cœur de la médina de Fès
+          Notre atelier vous accueille à Agadir
         </p>
         <GoldDivider className="my-6" />
         <p className="mx-auto max-w-2xl text-ivory/70 leading-relaxed">
@@ -205,19 +194,14 @@ function Hero() {
 
 /* ============== CONTACT INFO ============== */
 function ContactInfo({
-  adresse, telephone, whatsapp, email, horaires,
-  instagram, facebook,
-  telLink, waLink, mailLink,
+  adresse, email, horaires,
+  instagram, mapsLink, mailLink,
 }: {
   adresse: string;
-  telephone: string;
-  whatsapp: string;
   email: string;
   horaires: string;
   instagram: string;
-  facebook: string;
-  telLink: string;
-  waLink: string;
+  mapsLink: string;
   mailLink: string;
 }) {
   const { ref, visible } = useReveal();
@@ -232,22 +216,21 @@ function ContactInfo({
       <GoldDivider className="!justify-start !my-6" />
 
       <div className="space-y-4">
-        <InfoRow icon={MapPin} label="Adresse" value={adresse} />
-        <InfoRow icon={Phone} label="Téléphone" value={telephone} href={telLink} />
-        <InfoRow icon={MessageCircle} label="WhatsApp" value={whatsapp} href={waLink} />
+        <InfoRow icon={MapPin} label="Adresse" value={adresse} href={mapsLink} />
         <InfoRow icon={Mail} label="E-mail" value={email} href={mailLink} />
+        <InfoRow icon={Instagram} label="Instagram" value="@couture_nadira" href={instagram} />
         <InfoRow icon={Clock} label="Horaires" value={horaires} />
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
         <Button asChild className="bg-emerald-deep text-gold-light border border-gold/40 hover:bg-emerald-soft">
-          <a href={telLink}>
-            <Phone className="h-4 w-4" /> Nous appeler
+          <a href={mapsLink} target="_blank" rel="noreferrer">
+            <MapPin className="h-4 w-4" /> Voir sur la carte
           </a>
         </Button>
         <Button asChild variant="outline" className="border-gold/40 text-emerald-deep hover:bg-gold/10">
-          <a href={waLink} target="_blank" rel="noreferrer">
-            <MessageCircle className="h-4 w-4" /> WhatsApp
+          <a href={instagram} target="_blank" rel="noreferrer">
+            <Instagram className="h-4 w-4" /> Instagram
           </a>
         </Button>
       </div>
@@ -267,15 +250,6 @@ function ContactInfo({
             className="h-11 w-11 rounded-full border border-gold/40 flex items-center justify-center text-emerald-deep hover:bg-gold/10 transition-colors"
           >
             <Instagram className="h-5 w-5" />
-          </a>
-          <a
-            href={facebook}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Facebook"
-            className="h-11 w-11 rounded-full border border-gold/40 flex items-center justify-center text-emerald-deep hover:bg-gold/10 transition-colors"
-          >
-            <Facebook className="h-5 w-5" />
           </a>
         </div>
       </div>
@@ -572,7 +546,7 @@ function MapCard({
               <Button asChild className="mt-6 bg-gold text-emerald-deep hover:bg-gold-light">
                 <a href={mapsLink} target="_blank" rel="noreferrer">
                   <MapPin className="h-4 w-4" />
-                  Voir sur Google Maps
+                  Voir sur la carte
                 </a>
               </Button>
             </div>

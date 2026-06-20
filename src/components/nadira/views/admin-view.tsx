@@ -19,6 +19,7 @@ import type {
   Artisan,
   Contenu,
   Mesure,
+  Galerie,
 } from "@/lib/types";
 import { STATUT_LABELS, STATUT_COLORS } from "@/lib/types";
 import {
@@ -87,6 +88,8 @@ import {
   Star,
   FileText,
   Users,
+  Images,
+  Upload,
   LogOut,
   Plus,
   Edit,
@@ -96,7 +99,6 @@ import {
   Search,
   Eye,
   Phone,
-  DollarSign,
   Clock,
   AlertCircle,
   Menu,
@@ -185,6 +187,7 @@ const NAV_ITEMS: {
   { key: "rendezvous", label: "Rendez-vous", icon: Calendar },
   { key: "mesures", label: "Mesures", icon: Ruler },
   { key: "avis", label: "Avis", icon: Star },
+  { key: "galerie", label: "Galerie", icon: Images },
   { key: "artisans", label: "Artisans", icon: Users },
   { key: "contenu", label: "Contenu", icon: FileText },
 ];
@@ -459,6 +462,7 @@ function AdminDashboard() {
           {adminSection === "rendezvous" && <RendezvousSection />}
           {adminSection === "mesures" && <MesuresSection />}
           {adminSection === "avis" && <AvisSection />}
+          {adminSection === "galerie" && <GalerieSection />}
           {adminSection === "artisans" && <ArtisansSection />}
           {adminSection === "contenu" && <ContenuSection />}
         </main>
@@ -519,8 +523,6 @@ type Stats = {
   commandesEnAttente: number;
   commandesEnConfection: number;
   commandesLivrees: number;
-  caTotal: number;
-  caMois: number;
   totalClients: number;
   totalProduits: number;
   rdvAVenir: number;
@@ -534,7 +536,7 @@ type Stats = {
     };
     count: number;
   }[];
-  commandesParMois: { mois: string; count: number; ca: number }[];
+  commandesParMois: { mois: string; count: number }[];
   commandesRecentes: Commande[];
 };
 
@@ -588,9 +590,9 @@ function DashboardSection() {
           accent="emerald"
         />
         <KpiCard
-          icon={DollarSign}
-          label="CA total"
-          value={formatMAD(stats.caTotal)}
+          icon={Users}
+          label="Clients"
+          value={stats.totalClients}
           accent="gold"
         />
         <KpiCard
@@ -609,10 +611,10 @@ function DashboardSection() {
 
       {/* Secondary KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-        <MiniStat label="CA ce mois" value={formatMAD(stats.caMois)} />
-        <MiniStat label="Clients" value={stats.totalClients} />
-        <MiniStat label="Produits" value={stats.totalProduits} />
+        <MiniStat label="En confection" value={stats.commandesEnConfection} />
         <MiniStat label="Livrées" value={stats.commandesLivrees} />
+        <MiniStat label="Produits" value={stats.totalProduits} />
+        <MiniStat label="RDV à venir" value={stats.rdvAVenir} />
       </div>
 
       {/* Charts */}
@@ -1077,6 +1079,14 @@ function ProduitFormDialog({
     vedette: false,
     stock: "1",
     photos: "",
+    longueur: "",
+    largeur: "",
+    tourPoitrine: "",
+    tourTaille: "",
+    tourHanches: "",
+    longueurManche: "",
+    autreDimensions: "",
+    datePiece: "",
   });
   const [saving, setSaving] = useState(false);
 
@@ -1095,6 +1105,20 @@ function ProduitFormDialog({
         vedette: produit.vedette,
         stock: String(produit.stock),
         photos: produit.photos,
+        longueur: produit.longueur != null ? String(produit.longueur) : "",
+        largeur: produit.largeur != null ? String(produit.largeur) : "",
+        tourPoitrine:
+          produit.tourPoitrine != null ? String(produit.tourPoitrine) : "",
+        tourTaille:
+          produit.tourTaille != null ? String(produit.tourTaille) : "",
+        tourHanches:
+          produit.tourHanches != null ? String(produit.tourHanches) : "",
+        longueurManche:
+          produit.longueurManche != null ? String(produit.longueurManche) : "",
+        autreDimensions: produit.autreDimensions || "",
+        datePiece: produit.datePiece
+          ? String(produit.datePiece).slice(0, 10)
+          : "",
       });
     } else {
       setForm({
@@ -1110,6 +1134,14 @@ function ProduitFormDialog({
         vedette: false,
         stock: "1",
         photos: "",
+        longueur: "",
+        largeur: "",
+        tourPoitrine: "",
+        tourTaille: "",
+        tourHanches: "",
+        longueurManche: "",
+        autreDimensions: "",
+        datePiece: "",
       });
     }
   }, [produit, open]);
@@ -1129,6 +1161,11 @@ function ProduitFormDialog({
       return;
     }
     setSaving(true);
+    const numOrNullOrUndef = (v: string): number | null => {
+      if (v === "") return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
     const body = {
       nom: form.nom,
       slug: form.slug,
@@ -1142,6 +1179,16 @@ function ProduitFormDialog({
       vedette: form.vedette,
       stock: Number(form.stock) || 0,
       photos: form.photos,
+      longueur: numOrNullOrUndef(form.longueur),
+      largeur: numOrNullOrUndef(form.largeur),
+      tourPoitrine: numOrNullOrUndef(form.tourPoitrine),
+      tourTaille: numOrNullOrUndef(form.tourTaille),
+      tourHanches: numOrNullOrUndef(form.tourHanches),
+      longueurManche: numOrNullOrUndef(form.longueurManche),
+      autreDimensions: form.autreDimensions || null,
+      datePiece: form.datePiece
+        ? new Date(form.datePiece).toISOString()
+        : null,
     };
     try {
       if (produit) {
@@ -1291,6 +1338,104 @@ function ProduitFormDialog({
             <Label htmlFor="vedette">
               Mettre en vedette (affichage page d&apos;accueil)
             </Label>
+          </div>
+
+          {/* Dimensions */}
+          <div className="md:col-span-2 mt-2">
+            <p className="text-xs uppercase tracking-[0.15em] text-emerald-deep font-medium mb-2">
+              Dimensions (cm)
+            </p>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 bg-muted/30 p-3 rounded-md">
+              <div className="space-y-1">
+                <Label className="text-xs">Longueur</Label>
+                <Input
+                  type="number"
+                  value={form.longueur}
+                  onChange={(e) =>
+                    setForm({ ...form, longueur: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Largeur</Label>
+                <Input
+                  type="number"
+                  value={form.largeur}
+                  onChange={(e) =>
+                    setForm({ ...form, largeur: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Tour de poitrine</Label>
+                <Input
+                  type="number"
+                  value={form.tourPoitrine}
+                  onChange={(e) =>
+                    setForm({ ...form, tourPoitrine: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Tour de taille</Label>
+                <Input
+                  type="number"
+                  value={form.tourTaille}
+                  onChange={(e) =>
+                    setForm({ ...form, tourTaille: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Tour de hanches</Label>
+                <Input
+                  type="number"
+                  value={form.tourHanches}
+                  onChange={(e) =>
+                    setForm({ ...form, tourHanches: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Longueur manche</Label>
+                <Input
+                  type="number"
+                  value={form.longueurManche}
+                  onChange={(e) =>
+                    setForm({ ...form, longueurManche: e.target.value })
+                  }
+                  placeholder="0"
+                />
+              </div>
+              <div className="space-y-1 col-span-2 md:col-span-3">
+                <Label className="text-xs">Autres dimensions</Label>
+                <Textarea
+                  rows={2}
+                  value={form.autreDimensions}
+                  onChange={(e) =>
+                    setForm({ ...form, autreDimensions: e.target.value })
+                  }
+                  placeholder="Détails complémentaires (tour de cou, hauteur totale, etc.)"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Date de l'annonce/pièce */}
+          <div className="space-y-1.5">
+            <Label>Date de l&apos;annonce / pièce</Label>
+            <Input
+              type="date"
+              value={form.datePiece}
+              onChange={(e) =>
+                setForm({ ...form, datePiece: e.target.value })
+              }
+            />
           </div>
         </div>
         <DialogFooter>
@@ -1514,7 +1659,6 @@ function CommandeDetailDialog({
   const [loading, setLoading] = useState(true);
   const [statut, setStatut] = useState("");
   const [notes, setNotes] = useState("");
-  const [acompte, setAcompte] = useState("");
   const [dateRetrait, setDateRetrait] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -1525,7 +1669,6 @@ function CommandeDetailDialog({
         setCmd(c);
         setStatut(c.statut);
         setNotes(c.notes || "");
-        setAcompte(String(c.acompte));
         setDateRetrait(
           c.dateRetrait
             ? new Date(c.dateRetrait).toISOString().slice(0, 10)
@@ -1549,7 +1692,6 @@ function CommandeDetailDialog({
         body: JSON.stringify({
           statut,
           notes,
-          acompte: Number(acompte) || 0,
           dateRetrait: dateRetrait || null,
         }),
       });
@@ -1604,9 +1746,6 @@ function CommandeDetailDialog({
                 <p className="text-muted-foreground">
                   Date : {formatDate(cmd.dateCommande)}
                 </p>
-                <p className="text-muted-foreground">
-                  Paiement : {cmd.modePaiement}
-                </p>
                 {cmd.dateRetrait && (
                   <p className="text-muted-foreground">
                     Retrait : {formatDate(cmd.dateRetrait)}
@@ -1652,31 +1791,13 @@ function CommandeDetailDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 text-center bg-muted/40 rounded-md p-3">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Total
-                </p>
-                <p className="font-display text-lg text-emerald-deep">
-                  {formatMAD(cmd.montantTotal)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Acompte
-                </p>
-                <p className="font-display text-lg text-gold-deep">
-                  {formatMAD(cmd.acompte)}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
-                  Reste
-                </p>
-                <p className="font-display text-lg">
-                  {formatMAD(Math.max(0, cmd.montantTotal - cmd.acompte))}
-                </p>
-              </div>
+            <div className="bg-muted/40 rounded-md p-3 text-center">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                Total de la commande
+              </p>
+              <p className="font-display text-2xl text-emerald-deep">
+                {formatMAD(cmd.montantTotal)}
+              </p>
             </div>
 
             {cmd.notes && (
@@ -1696,7 +1817,7 @@ function CommandeDetailDialog({
               <h4 className="font-display text-base text-emerald-deep">
                 Mettre à jour la commande
               </h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Statut</Label>
                   <Select value={statut} onValueChange={setStatut}>
@@ -1711,14 +1832,6 @@ function CommandeDetailDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Acompte (MAD)</Label>
-                  <Input
-                    type="number"
-                    value={acompte}
-                    onChange={(e) => setAcompte(e.target.value)}
-                  />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Date de retrait</Label>
@@ -1805,8 +1918,6 @@ function ManualOrderDialog({
 
   // Confirmation
   const [confirme, setConfirme] = useState(false);
-  const [acompte, setAcompte] = useState("");
-  const [modePaiement, setModePaiement] = useState("atelier");
   const [notes, setNotes] = useState("");
 
   const [saving, setSaving] = useState(false);
@@ -1840,8 +1951,6 @@ function ManualOrderDialog({
     setDateRetrait("");
     setStatut("en_attente");
     setConfirme(false);
-    setAcompte("");
-    setModePaiement("atelier");
     setNotes("");
   }, [open]);
 
@@ -1949,8 +2058,6 @@ function ManualOrderDialog({
       })),
       dateRetrait: dateRetrait || undefined,
       statut,
-      modePaiement,
-      acompte: Number(acompte) || 0,
       notes: notes || undefined,
     };
     if (selectedClient && !newClientMode) {
@@ -2271,7 +2378,7 @@ function ManualOrderDialog({
             <h4 className="font-display text-base text-emerald-deep flex items-center gap-2">
               <Clock className="w-4 h-4" /> Logistique
             </h4>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div className="space-y-1">
                 <Label className="text-xs">Date de retrait</Label>
                 <Input
@@ -2295,23 +2402,6 @@ function ManualOrderDialog({
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Mode paiement</Label>
-                <Select
-                  value={modePaiement}
-                  onValueChange={setModePaiement}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="atelier">Atelier</SelectItem>
-                    <SelectItem value="virement">Virement</SelectItem>
-                    <SelectItem value="especes">Espèces</SelectItem>
-                    <SelectItem value="carte">Carte</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </section>
 
@@ -2322,21 +2412,13 @@ function ManualOrderDialog({
             <h4 className="font-display text-base text-emerald-deep flex items-center gap-2">
               <Check className="w-4 h-4" /> Confirmation
             </h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs">Acompte (MAD)</Label>
-                <Input
-                  type="number"
-                  value={acompte}
-                  onChange={(e) => setAcompte(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs">Total commande</Label>
-                <div className="font-display text-lg text-emerald-deep py-1.5">
-                  {formatMAD(montantTotal)}
-                </div>
-              </div>
+            <div className="bg-muted/30 p-3 rounded-md flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Total commande
+              </span>
+              <span className="font-display text-lg text-emerald-deep">
+                {formatMAD(montantTotal)}
+              </span>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Notes internes</Label>
@@ -2859,7 +2941,333 @@ function AvisSection() {
 }
 
 /* ============================================================
-   7. Artisans section
+   7. Galerie section
+============================================================ */
+
+const GALERIE_CATEGORIES = [
+  "Atelier",
+  "Coulisses",
+  "Défilé",
+  "Produits",
+  "Autre",
+] as const;
+
+const GALERIE_CAT_COLORS: Record<string, string> = {
+  Atelier: "bg-emerald/10 text-emerald-deep border-emerald/30",
+  Coulisses: "bg-amber-100 text-amber-800 border-amber-300",
+  Défilé: "bg-rose-100 text-rose-800 border-rose-300",
+  Produits: "bg-gold/15 text-gold-deep border-gold/30",
+  Autre: "bg-muted text-muted-foreground border-border",
+};
+
+function GalerieSection() {
+  const [photos, setPhotos] = useState<Galerie[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addOpen, setAddOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Galerie | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    api<Galerie[]>("/api/galerie")
+      .then(setPhotos)
+      .catch((e) => toast.error(e.message))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+  }, [load]);
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    try {
+      await adminApi(`/api/galerie/${deleteTarget.id}`, { method: "DELETE" });
+      toast.success("Photo supprimée");
+      setDeleteTarget(null);
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="font-display text-2xl text-emerald-deep">
+            Galerie photos
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {photos.length} photo{photos.length > 1 ? "s" : ""} publiée
+            {photos.length > 1 ? "s" : ""}
+          </p>
+        </div>
+        <Button
+          className="bg-emerald hover:bg-emerald-deep text-ivory"
+          onClick={() => setAddOpen(true)}
+        >
+          <Plus className="w-4 h-4 mr-1" /> Ajouter une photo
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <Skeleton key={i} className="aspect-square w-full" />
+          ))}
+        </div>
+      ) : photos.length === 0 ? (
+        <Card className="p-10 text-center text-muted-foreground">
+          Aucune photo pour le moment. Cliquez sur « Ajouter une photo » pour
+          commencer.
+        </Card>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {photos.map((p) => (
+            <Card key={p.id} className="overflow-hidden p-0 group">
+              <div className="aspect-square bg-muted overflow-hidden">
+                <img
+                  src={p.url}
+                  alt={p.legende || "Photo galerie"}
+                  className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                  onError={(e) => {
+                    const t = e.currentTarget as HTMLImageElement;
+                    t.style.display = "none";
+                  }}
+                />
+              </div>
+              <div className="p-3 space-y-2">
+                {p.categorie && (
+                  <span
+                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] border ${
+                      GALERIE_CAT_COLORS[p.categorie] ||
+                      "bg-muted text-muted-foreground border-border"
+                    }`}
+                  >
+                    {p.categorie}
+                  </span>
+                )}
+                {p.legende && (
+                  <p className="text-sm text-foreground/90 line-clamp-2">
+                    {p.legende}
+                  </p>
+                )}
+                <div className="flex justify-end pt-1">
+                  <AlertDialog
+                    open={deleteTarget?.id === p.id}
+                    onOpenChange={(o) => !o && setDeleteTarget(null)}
+                  >
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive h-8 w-8 p-0"
+                        onClick={() => setDeleteTarget(p)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Supprimer cette photo ?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Cette action est irréversible. La photo sera
+                          définitivement retirée de la galerie.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleDelete}
+                          className="bg-destructive text-white hover:bg-destructive/90"
+                        >
+                          Supprimer
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <GalerieAddDialog
+        open={addOpen}
+        onOpenChange={(o) => {
+          setAddOpen(o);
+          if (!o) load();
+        }}
+      />
+    </div>
+  );
+}
+
+function GalerieAddDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [legende, setLegende] = useState("");
+  const [categorie, setCategorie] = useState<string>("Atelier");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) return;
+    setFile(null);
+    setPreview(null);
+    setLegende("");
+    setCategorie("Atelier");
+  }, [open]);
+
+  function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0] || null;
+    setFile(f);
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(f ? URL.createObjectURL(f) : null);
+  }
+
+  async function submit() {
+    if (!file) {
+      toast.error("Sélectionnez une image");
+      return;
+    }
+    setSaving(true);
+    try {
+      // 1. Upload the file (FormData) — manual fetch because adminApi
+      //    forces Content-Type: application/json which breaks multipart.
+      const token = getToken();
+      const formData = new FormData();
+      formData.append("file", file);
+      const upRes = await fetch("/api/upload", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: formData,
+      });
+      if (!upRes.ok) {
+        let msg = `Erreur ${upRes.status}`;
+        try {
+          const d = await upRes.json();
+          msg = d.error || msg;
+        } catch {
+          /* noop */
+        }
+        throw new Error(msg);
+      }
+      const { url } = (await upRes.json()) as { url: string };
+
+      // 2. Create the galerie entry
+      await adminApi<Galerie>("/api/galerie", {
+        method: "POST",
+        body: JSON.stringify({
+          url,
+          legende: legende || null,
+          categorie: categorie || null,
+        }),
+      });
+      toast.success("Photo ajoutée à la galerie");
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Ajouter une photo</DialogTitle>
+          <DialogDescription>
+            Téléversez une image depuis votre ordinateur.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Image *</Label>
+            <label className="flex flex-col items-center justify-center border-2 border-dashed border-border rounded-md p-6 cursor-pointer hover:border-emerald/40 hover:bg-muted/30 transition-colors">
+              {preview ? (
+                <img
+                  src={preview}
+                  alt="Aperçu"
+                  className="max-h-48 mx-auto rounded-md object-contain"
+                />
+              ) : (
+                <>
+                  <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                  <span className="text-sm text-muted-foreground">
+                    Cliquez pour choisir une image
+                  </span>
+                  <span className="text-[10px] text-muted-foreground mt-1">
+                    JPG, PNG, WEBP — 10 Mo max
+                  </span>
+                </>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={onFileChange}
+              />
+            </label>
+            {file && (
+              <p className="text-xs text-muted-foreground truncate">
+                {file.name} ({Math.round(file.size / 1024)} Ko)
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Légende</Label>
+            <Input
+              value={legende}
+              onChange={(e) => setLegende(e.target.value)}
+              placeholder="Description courte (optionnel)"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Catégorie</Label>
+            <Select value={categorie} onValueChange={setCategorie}>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GALERIE_CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Annuler
+          </Button>
+          <Button
+            onClick={submit}
+            disabled={saving || !file}
+            className="bg-emerald hover:bg-emerald-deep text-ivory"
+          >
+            {saving ? "Téléversement..." : "Publier la photo"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ============================================================
+   8. Artisans section
 ============================================================ */
 
 function ArtisansSection() {
@@ -3147,7 +3555,7 @@ function ArtisanFormDialog({
 }
 
 /* ============================================================
-   8. Contenu section
+   9. Contenu section
 ============================================================ */
 
 const CONTENU_LABELS: Record<string, string> = {

@@ -20,6 +20,7 @@ export type AdminSection =
   | "rendezvous"
   | "mesures"
   | "avis"
+  | "galerie"
   | "contenu"
   | "artisans";
 

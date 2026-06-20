@@ -53,6 +53,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
       stock,
       photos,
       artisanIds,
+      longueur,
+      largeur,
+      tourPoitrine,
+      tourTaille,
+      tourHanches,
+      longueurManche,
+      autreDimensions,
+      datePiece,
     } = body as {
       nom?: string;
       description?: string;
@@ -66,6 +74,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
       stock?: number;
       photos?: string;
       artisanIds?: number[];
+      longueur?: number | null;
+      largeur?: number | null;
+      tourPoitrine?: number | null;
+      tourTaille?: number | null;
+      tourHanches?: number | null;
+      longueurManche?: number | null;
+      autreDimensions?: string | null;
+      datePiece?: string | null;
     };
 
     // Find the product first
@@ -91,6 +107,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
     if (vedette != null) data.vedette = !!vedette;
     if (stock != null) data.stock = Number(stock);
     if (photos != null) data.photos = photos;
+    if (longueur !== undefined) data.longueur = longueur === "" || longueur == null ? null : Number(longueur);
+    if (largeur !== undefined) data.largeur = largeur === "" || largeur == null ? null : Number(largeur);
+    if (tourPoitrine !== undefined) data.tourPoitrine = tourPoitrine === "" || tourPoitrine == null ? null : Number(tourPoitrine);
+    if (tourTaille !== undefined) data.tourTaille = tourTaille === "" || tourTaille == null ? null : Number(tourTaille);
+    if (tourHanches !== undefined) data.tourHanches = tourHanches === "" || tourHanches == null ? null : Number(tourHanches);
+    if (longueurManche !== undefined) data.longueurManche = longueurManche === "" || longueurManche == null ? null : Number(longueurManche);
+    if (autreDimensions !== undefined) data.autreDimensions = autreDimensions || null;
+    if (datePiece !== undefined) data.datePiece = datePiece ? new Date(datePiece) : null;
 
     const produit = await db.produit.update({
       where: { id: existing.id },

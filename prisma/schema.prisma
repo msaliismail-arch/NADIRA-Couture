@@ -19,7 +19,7 @@ model Categorie {
   produits  Produit[]
 }
 
-/// Produit de la maison (caftan, takchita, djellaba, accessoire)
+/// Produit de la maison (caftan, takchita, djellaba, accessoire) = annonce/listing
 model Produit {
   id              Int       @id @default(autoincrement())
   nom             String
@@ -35,10 +35,28 @@ model Produit {
   vedette         Boolean   @default(false) // mise en avant collection vedette
   stock           Int       @default(1)
   photos          String    // URLs séparées par virgules (première = couverture)
+  // Dimensions de la pièce (longueur, largeur, etc.) — en cm
+  longueur        Float?
+  largeur         Float?
+  tourPoitrine    Float?
+  tourTaille      Float?
+  tourHanches     Float?
+  longueurManche  Float?
+  autreDimensions String?   // texte libre pour dimensions supplémentaires
+  datePiece       DateTime? // date de l'annonce/pièce
   created_at      DateTime  @default(now())
   updated_at      DateTime  @updatedAt
   ligneCommandes  LigneCommande[]
   artisans        ProduitArtisan[]
+}
+
+/// Galerie photos — gérée par l'administrateur (ajout/suppression)
+model Galerie {
+  id          Int      @id @default(autoincrement())
+  url         String   // chemin vers l'image
+  legende     String?
+  categorie   String?  // atelier, défilé, coulisses, etc.
+  created_at  DateTime @default(now())
 }
 
 /// Artisan / couturière / brodeuse de l'atelier

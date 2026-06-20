@@ -172,7 +172,6 @@ function OrderTrackingCard({
 }) {
   const client = commande.client;
   const lignes = commande.lignes ?? [];
-  const reste = Math.max(0, (commande.montantTotal ?? 0) - (commande.acompte ?? 0));
   const { ref, visible } = useReveal<HTMLDivElement>();
   const revealClass = visible ? "in-view" : "";
 
@@ -282,24 +281,8 @@ function OrderTrackingCard({
                 {formatMAD(commande.montantTotal ?? 0)}
               </dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Acompte versé</dt>
-              <dd className="text-emerald-deep">
-                {formatMAD(commande.acompte ?? 0)}
-              </dd>
-            </div>
-            <div className="flex justify-between border-t border-gold/20 pt-2">
-              <dt className="text-muted-foreground">Reste à payer</dt>
-              <dd className="font-semibold text-rouge">
-                {formatMAD(reste)}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground">Paiement</dt>
-              <dd className="text-emerald-deep">{commande.modePaiement || "—"}</dd>
-            </div>
             {commande.dateRetrait ? (
-              <div className="flex justify-between">
+              <div className="flex justify-between border-t border-gold/20 pt-2">
                 <dt className="text-muted-foreground">Date de retrait</dt>
                 <dd className="text-emerald-deep">
                   {formatDate(commande.dateRetrait)}

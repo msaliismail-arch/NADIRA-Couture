@@ -22,8 +22,25 @@ export type Produit = {
   vedette: boolean;
   stock: number;
   photos: string;
+  // Dimensions (cm)
+  longueur: number | null;
+  largeur: number | null;
+  tourPoitrine: number | null;
+  tourTaille: number | null;
+  tourHanches: number | null;
+  longueurManche: number | null;
+  autreDimensions: string | null;
+  datePiece: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type Galerie = {
+  id: number;
+  url: string;
+  legende: string | null;
+  categorie: string | null;
+  created_at: string;
 };
 
 export type Artisan = {

@@ -65,6 +65,14 @@ export async function POST(req: NextRequest) {
       vedette,
       stock,
       photos,
+      longueur,
+      largeur,
+      tourPoitrine,
+      tourTaille,
+      tourHanches,
+      longueurManche,
+      autreDimensions,
+      datePiece,
     } = body as {
       nom?: string;
       slug?: string;
@@ -78,6 +86,14 @@ export async function POST(req: NextRequest) {
       vedette?: boolean;
       stock?: number;
       photos?: string;
+      longueur?: number | null;
+      largeur?: number | null;
+      tourPoitrine?: number | null;
+      tourTaille?: number | null;
+      tourHanches?: number | null;
+      longueurManche?: number | null;
+      autreDimensions?: string | null;
+      datePiece?: string | null;
     };
 
     if (!nom || !slug || !description || !idCategorie || prix == null || !tissu || !couleurs || !photos) {
@@ -101,6 +117,14 @@ export async function POST(req: NextRequest) {
         vedette: !!vedette,
         stock: stock != null ? Number(stock) : 1,
         photos,
+        longueur: longueur != null && longueur !== "" ? Number(longueur) : null,
+        largeur: largeur != null && largeur !== "" ? Number(largeur) : null,
+        tourPoitrine: tourPoitrine != null && tourPoitrine !== "" ? Number(tourPoitrine) : null,
+        tourTaille: tourTaille != null && tourTaille !== "" ? Number(tourTaille) : null,
+        tourHanches: tourHanches != null && tourHanches !== "" ? Number(tourHanches) : null,
+        longueurManche: longueurManche != null && longueurManche !== "" ? Number(longueurManche) : null,
+        autreDimensions: autreDimensions || null,
+        datePiece: datePiece ? new Date(datePiece) : null,
       },
       include: { categorie: true },
     });

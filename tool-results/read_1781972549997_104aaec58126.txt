@@ -1,0 +1,965 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useState, useCallback } from "react";
+     4→import {
+     5→  Search,
+     6→  Package,
+     7→  Ruler,
+     8→  Calendar,
+     9→  Clock,
+    10→  Check,
+    11→  Truck,
+    12→  Scissors,
+    13→  Phone,
+    14→  ArrowRight,
+    15→  ChevronRight,
+    16→  MessageCircle,
+    17→  X,
+    18→} from "lucide-react";
+    19→
+    20→import { useStore } from "@/lib/store";
+    21→import { api, formatMAD, formatDate } from "@/lib/api";
+    22→import type { Commande, Mesure, Contenu } from "@/lib/types";
+    23→import { STATUT_LABELS, STATUT_COLORS } from "@/lib/types";
+    24→import { NadiraMonogram, GoldDivider, KhatimStar } from "@/components/nadira/brand";
+    25→import { useReveal } from "@/hooks/use-reveal";
+    26→import { Button } from "@/components/ui/button";
+    27→import { Card } from "@/components/ui/card";
+    28→import { Input } from "@/components/ui/input";
+    29→import { Label } from "@/components/ui/label";
+    30→import { Badge } from "@/components/ui/badge";
+    31→import { Separator } from "@/components/ui/separator";
+    32→
+    33→/* ------------------------------------------------------------------ */
+    34→/*  Constants                                                          */
+    35→/* ------------------------------------------------------------------ */
+    36→
+    37→const STEPS = [
+    38→  { key: "en_attente", label: "En attente", icon: Clock },
+    39→  { key: "en_confection", label: "En confection", icon: Scissors },
+    40→  { key: "expediee", label: "Expédiée", icon: Truck },
+    41→  { key: "livree", label: "Livrée", icon: Check },
+    42→] as const;
+    43→
+    44→const STEP_INDEX: Record<string, number> = {
+    45→  en_attente: 0,
+    46→  en_confection: 1,
+    47→  expediee: 2,
+    48→  livree: 3,
+    49→};
+    50→
+    51→/* ------------------------------------------------------------------ */
+    52→/*  Helpers                                                            */
+    53→/* ------------------------------------------------------------------ */
+    54→
+    55→/** Parse photos JSON string into a list of URLs (defensive). */
+    56→function parsePhotos(raw: string | null | undefined): string[] {
+    57→  if (!raw) return [];
+    58→  try {
+    59→    const v = JSON.parse(raw);
+    60→    if (Array.isArray(v)) return v.filter((x) => typeof x === "string");
+    61→    if (typeof v === "string") return [v];
+    62→  } catch {
+    63→    // maybe a single URL string
+    64→    if (raw.startsWith("http") || raw.startsWith("/")) return [raw];
+    65→  }
+    66→  return [];
+    67→}
+    68→
+    69→/** WhatsApp link from a phone number (strip spaces, country code stays). */
+    70→function whatsappLink(phone: string, message?: string): string {
+    71→  const digits = phone.replace(/[^\d]/g, "");
+    72→  const text = message ? `?text=${encodeURIComponent(message)}` : "";
+    73→  return `https://wa.me/${digits}${text}`;
+    74→}
+    75→
+    76→/* ------------------------------------------------------------------ */
+    77→/*  Progress Tracker — horizontal stepper                              */
+    78→/* ------------------------------------------------------------------ */
+    79→
+    80→function ProgressTracker({ statut }: { statut: string }) {
+    81→  const isAnnulee = statut === "annulee";
+    82→  const currentIdx = STEP_INDEX[statut] ?? 0;
+    83→
+    84→  if (isAnnulee) {
+    85→    return (
+    86→      <div className="rounded-lg border border-rose-300 bg-rose-50/60 px-4 py-5">
+    87→        <div className="flex items-center gap-3">
+    88→          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-2 border-rose-400 bg-rose-100 text-rose-600">
+    89→            <X className="h-5 w-5" />
+    90→          </div>
+    91→          <div>
+    92→            <p className="font-display text-lg text-rose-800">
+    93→              Commande annulée
+    94→            </p>
+    95→            <p className="text-sm text-rose-700/80">
+    96→              Cette commande a été annulée. Pour toute question, contactez
+    97→              l&apos;atelier.
+    98→            </p>
+    99→          </div>
+   100→        </div>
+   101→      </div>
+   102→    );
+   103→  }
+   104→
+   105→  return (
+   106→    <div className="rounded-lg border border-gold/30 bg-ivory-warm/60 px-4 py-6 sm:px-6">
+   107→      <div className="relative">
+   108→        {/* Background connecting line — full width, light gray */}
+   109→        <div className="absolute left-0 right-0 top-5 h-0.5 bg-border" aria-hidden />
+   110→        {/* Gold progress line — fills up to current step */}
+   111→        <div
+   112→          className="absolute left-0 top-5 h-0.5 bg-gradient-to-r from-gold-deep via-gold to-gold-light transition-all duration-700"
+   113→          style={{
+   114→            width:
+   115→              currentIdx === 0
+   116→                ? "0%"
+   117→                : `calc((100% / 3) * ${currentIdx})`,
+   118→          }}
+   119→          aria-hidden
+   120→        />
+   121→        <ol className="relative flex justify-between">
+   122→          {STEPS.map((step, idx) => {
+   123→            const completed = idx < currentIdx;
+   124→            const current = idx === currentIdx;
+   125→            const Icon = step.icon;
+   126→            const stateClass = completed
+   127→              ? "border-gold bg-gold text-emerald-deep shadow-[0_0_0_4px_rgba(201,162,75,0.15)]"
+   128→              : current
+   129→                ? "border-gold bg-ivory text-gold-deep shadow-[0_0_0_4px_rgba(201,162,75,0.22)]"
+   130→                : "border-border bg-ivory text-muted-foreground";
+   131→            const labelClass = completed
+   132→              ? "text-emerald-deep"
+   133→              : current
+   134→                ? "text-gold-deep font-semibold"
+   135→                : "text-muted-foreground";
+   136→            return (
+   137→              <li
+   138→                key={step.key}
+   139→                className="flex w-1/4 flex-col items-center text-center"
+   140→              >
+   141→                <div
+   142→                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 bg-ivory transition-all duration-500 ${stateClass}`}
+   143→                >
+   144→                  <Icon className="h-4 w-4" />
+   145→                </div>
+   146→                <span
+   147→                  className={`mt-2 text-[11px] sm:text-xs leading-tight ${labelClass}`}
+   148→                >
+   149→                  {step.label}
+   150→                </span>
+   151→              </li>
+   152→            );
+   153→          })}
+   154→        </ol>
+   155→      </div>
+   156→    </div>
+   157→  );
+   158→}
+   159→
+   160→/* ------------------------------------------------------------------ */
+   161→/*  Order Tracking Card                                                */
+   162→/* ------------------------------------------------------------------ */
+   163→
+   164→function OrderTrackingCard({
+   165→  commande,
+   166→  atelierTel,
+   167→  onExplore,
+   168→}: {
+   169→  commande: Commande;
+   170→  atelierTel: string;
+   171→  onExplore: () => void;
+   172→}) {
+   173→  const client = commande.client;
+   174→  const lignes = commande.lignes ?? [];
+   175→  const reste = Math.max(0, (commande.montantTotal ?? 0) - (commande.acompte ?? 0));
+   176→  const { ref, visible } = useReveal<HTMLDivElement>();
+   177→  const revealClass = visible ? "in-view" : "";
+   178→
+   179→  return (
+   180→    <div
+   181→      ref={ref}
+   182→      className={`reveal ${revealClass} mt-5 rounded-xl border border-gold/30 bg-white p-5 sm:p-7 shadow-sm`}
+   183→    >
+   184→      {/* Header: reference + date + statut */}
+   185→      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+   186→        <div>
+   187→          <p className="text-[11px] uppercase tracking-[0.25em] text-gold-deep">
+   188→            Commande
+   189→          </p>
+   190→          <p className="font-display text-2xl text-emerald-deep">
+   191→            {commande.reference}
+   192→          </p>
+   193→          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+   194→            <Calendar className="h-3.5 w-3.5" />
+   195→            {formatDate(commande.dateCommande)}
+   196→          </p>
+   197→        </div>
+   198→        <Badge
+   199→          className={`shrink-0 border ${STATUT_COLORS[commande.statut] || STATUT_COLORS.en_attente} px-3 py-1 text-xs`}
+   200→        >
+   201→          {STATUT_LABELS[commande.statut] || commande.statut}
+   202→        </Badge>
+   203→      </div>
+   204→
+   205→      <Separator className="my-5 bg-gold/20" />
+   206→
+   207→      {/* Progress tracker */}
+   208→      <ProgressTracker statut={commande.statut} />
+   209→
+   210→      {/* Order items */}
+   211→      <div className="mt-6">
+   212→        <h4 className="mb-3 flex items-center gap-2 text-xs uppercase tracking-[0.2em] text-emerald-deep">
+   213→          <Package className="h-4 w-4 text-gold-deep" />
+   214→          Articles
+   215→        </h4>
+   216→        <ul className="space-y-3">
+   217→          {lignes.map((l, i) => {
+   218→            const photos = parsePhotos(l.produit?.photos);
+   219→            const photo = photos[0];
+   220→            return (
+   221→              <li
+   222→                key={`${l.idProduit}-${i}`}
+   223→                className="flex gap-3 rounded-lg border border-border bg-ivory-warm/40 p-3"
+   224→              >
+   225→                <div className="h-16 w-16 shrink-0 overflow-hidden rounded-md border border-gold/20 bg-ivory">
+   226→                  {photo ? (
+   227→                    <img
+   228→                      src={photo}
+   229→                      alt={l.produit?.nom || "Article"}
+   230→                      className="h-full w-full object-cover"
+   231→                    />
+   232→                  ) : (
+   233→                    <div className="flex h-full w-full items-center justify-center text-gold-deep/40">
+   234→                      <Scissors className="h-5 w-5" />
+   235→                    </div>
+   236→                  )}
+   237→                </div>
+   238→                <div className="min-w-0 flex-1">
+   239→                  <div className="flex flex-wrap items-start justify-between gap-2">
+   240→                    <p className="font-serif-alt text-base font-medium text-emerald-deep">
+   241→                      {l.produit?.nom || "Article"}
+   242→                    </p>
+   243→                    <p className="font-display text-sm text-gold-deep">
+   244→                      {formatMAD((l.prixUnitaire ?? 0) * (l.quantite ?? 1))}
+   245→                    </p>
+   246→                  </div>
+   247→                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+   248→                    <span>Qté : {l.quantite ?? 1}</span>
+   249→                    {l.taille ? <span>Taille : {l.taille}</span> : null}
+   250→                    {l.couleur ? <span>Couleur : {l.couleur}</span> : null}
+   251→                    {l.surMesure ? (
+   252→                      <Badge className="border-gold/40 bg-gold/10 text-gold-deep">
+   253→                        Sur-mesure
+   254→                      </Badge>
+   255→                    ) : null}
+   256→                  </div>
+   257→                  <p className="mt-1 text-[11px] text-muted-foreground/80">
+   258→                    {formatMAD(l.prixUnitaire ?? 0)} / pièce
+   259→                  </p>
+   260→                </div>
+   261→              </li>
+   262→            );
+   263→          })}
+   264→          {lignes.length === 0 ? (
+   265→            <li className="rounded-lg border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+   266→              Aucun article associé à cette commande.
+   267→            </li>
+   268→          ) : null}
+   269→        </ul>
+   270→      </div>
+   271→
+   272→      {/* Summary */}
+   273→      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+   274→        <div className="rounded-lg border border-border bg-ivory-warm/40 p-4">
+   275→          <h4 className="mb-3 text-xs uppercase tracking-[0.2em] text-emerald-deep">
+   276→            Récapitulatif
+   277→          </h4>
+   278→          <dl className="space-y-2 text-sm">
+   279→            <div className="flex justify-between">
+   280→              <dt className="text-muted-foreground">Montant total</dt>
+   281→              <dd className="font-display text-lg text-gold-deep">
+   282→                {formatMAD(commande.montantTotal ?? 0)}
+   283→              </dd>
+   284→            </div>
+   285→            <div className="flex justify-between">
+   286→              <dt className="text-muted-foreground">Acompte versé</dt>
+   287→              <dd className="text-emerald-deep">
+   288→                {formatMAD(commande.acompte ?? 0)}
+   289→              </dd>
+   290→            </div>
+   291→            <div className="flex justify-between border-t border-gold/20 pt-2">
+   292→              <dt className="text-muted-foreground">Reste à payer</dt>
+   293→              <dd className="font-semibold text-rouge">
+   294→                {formatMAD(reste)}
+   295→              </dd>
+   296→            </div>
+   297→            <div className="flex justify-between">
+   298→              <dt className="text-muted-foreground">Paiement</dt>
+   299→              <dd className="text-emerald-deep">{commande.modePaiement || "—"}</dd>
+   300→            </div>
+   301→            {commande.dateRetrait ? (
+   302→              <div className="flex justify-between">
+   303→                <dt className="text-muted-foreground">Date de retrait</dt>
+   304→                <dd className="text-emerald-deep">
+   305→                  {formatDate(commande.dateRetrait)}
+   306→                </dd>
+   307→              </div>
+   308→            ) : null}
+   309→          </dl>
+   310→        </div>
+   311→
+   312→        <div className="rounded-lg border border-border bg-ivory-warm/40 p-4">
+   313→          <h4 className="mb-3 text-xs uppercase tracking-[0.2em] text-emerald-deep">
+   314→            Client
+   315→          </h4>
+   316→          {client ? (
+   317→            <dl className="space-y-2 text-sm">
+   318→              <div>
+   319→                <dt className="text-xs uppercase tracking-wider text-muted-foreground/70">
+   320→                  Nom
+   321→                </dt>
+   322→                <dd className="text-emerald-deep">
+   323→                  {client.prenom} {client.nom}
+   324→                </dd>
+   325→              </div>
+   326→              <div>
+   327→                <dt className="text-xs uppercase tracking-wider text-muted-foreground/70">
+   328→                  Téléphone
+   329→                </dt>
+   330→                <dd className="text-emerald-deep">{client.telephone}</dd>
+   331→              </div>
+   332→            </dl>
+   333→          ) : (
+   334→            <p className="text-sm text-muted-foreground italic">
+   335→              Les coordonnées client sont conservées à l&apos;atelier.
+   336→            </p>
+   337→          )}
+   338→
+   339→          {commande.notes ? (
+   340→            <div className="mt-3 border-t border-gold/20 pt-3">
+   341→              <p className="text-xs uppercase tracking-wider text-muted-foreground/70">
+   342→                Notes de l&apos;atelier
+   343→              </p>
+   344→              <p className="mt-1 text-sm italic text-emerald-deep/90">
+   345→                « {commande.notes} »
+   346→              </p>
+   347→            </div>
+   348→          ) : null}
+   349→        </div>
+   350→      </div>
+   351→
+   352→      {/* Contact note + actions */}
+   353→      <div className="mt-6 rounded-lg border border-gold/20 bg-emerald/[0.04] p-4">
+   354→        <p className="text-sm text-emerald-deep">
+   355→          Pour toute question concernant cette commande, contactez notre
+   356→          atelier.
+   357→        </p>
+   358→        <div className="mt-3 flex flex-wrap gap-2">
+   359→          <Button asChild size="sm" className="bg-emerald-deep hover:bg-emerald text-ivory">
+   360→            <a href={`tel:${atelierTel}`}>
+   361→              <Phone className="h-3.5 w-3.5" />
+   362→              {atelierTel}
+   363→            </a>
+   364→          </Button>
+   365→          <Button
+   366→            asChild
+   367→            size="sm"
+   368→            variant="outline"
+   369→            className="border-gold/40 text-emerald-deep hover:bg-gold/10"
+   370→          >
+   371→            <a
+   372→              href={whatsappLink(
+   373→                atelierTel,
+   374→                `Bonjour NADIRA, je vous contacte au sujet de la commande ${commande.reference}.`,
+   375→              )}
+   376→              target="_blank"
+   377→              rel="noreferrer"
+   378→            >
+   379→              <MessageCircle className="h-3.5 w-3.5" />
+   380→              WhatsApp
+   381→            </a>
+   382→          </Button>
+   383→        </div>
+   384→      </div>
+   385→
+   386→      <div className="mt-5 flex justify-end">
+   387→        <Button
+   388→          onClick={onExplore}
+   389→          variant="ghost"
+   390→          className="text-emerald-deep hover:bg-gold/10 hover:text-gold-deep"
+   391→        >
+   392→          Découvrir d&apos;autres pièces
+   393→          <ArrowRight className="h-4 w-4" />
+   394→        </Button>
+   395→      </div>
+   396→    </div>
+   397→  );
+   398→}
+   399→
+   400→/* ------------------------------------------------------------------ */
+   401→/*  Mesures Card                                                       */
+   402→/* ------------------------------------------------------------------ */
+   403→
+   404→const MESURE_FIELDS: {
+   405→  key: keyof Pick<
+   406→    Mesure,
+   407→    | "tourPoitrine"
+   408→    | "tourTaille"
+   409→    | "tourHanches"
+   410→    | "longueurRobe"
+   411→    | "longueurManche"
+   412→    | "longueurEpaule"
+   413→    | "tourBras"
+   414→  >;
+   415→  label: string;
+   416→}[] = [
+   417→  { key: "tourPoitrine", label: "Tour de poitrine" },
+   418→  { key: "tourTaille", label: "Tour de taille" },
+   419→  { key: "tourHanches", label: "Tour de hanches" },
+   420→  { key: "longueurRobe", label: "Longueur robe" },
+   421→  { key: "longueurManche", label: "Longueur manche" },
+   422→  { key: "longueurEpaule", label: "Longueur épaule" },
+   423→  { key: "tourBras", label: "Tour de bras" },
+   424→];
+   425→
+   426→function MesuresCard({
+   427→  mesures,
+   428→  onCommander,
+   429→}: {
+   430→  mesures: Mesure[];
+   431→  onCommander: () => void;
+   432→}) {
+   433→  const latest = mesures[0];
+   434→  const { ref, visible } = useReveal<HTMLDivElement>();
+   435→  const revealClass = visible ? "in-view" : "";
+   436→
+   437→  return (
+   438→    <div
+   439→      ref={ref}
+   440→      className={`reveal ${revealClass} mt-5 rounded-xl border border-gold/30 bg-white p-5 sm:p-7 shadow-sm`}
+   441→    >
+   442→      <div className="flex items-center justify-between gap-3">
+   443→        <div>
+   444→          <p className="text-[11px] uppercase tracking-[0.25em] text-gold-deep">
+   445→            Fiche de mesures
+   446→          </p>
+   447→          <p className="font-display text-2xl text-emerald-deep">
+   448→            {mesures.length}{" "}
+   449→            {mesures.length > 1 ? "enregistrements" : "enregistrement"}
+   450→          </p>
+   451→        </div>
+   452→        <Ruler className="h-7 w-7 text-gold-deep/70" />
+   453→      </div>
+   454→
+   455→      <Separator className="my-5 bg-gold/20" />
+   456→
+   457→      {latest ? (
+   458→        <>
+   459→          <p className="mb-3 text-xs uppercase tracking-[0.2em] text-emerald-deep">
+   460→            Dernier relevé — {formatDate(latest.created_at)}
+   461→          </p>
+   462→          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+   463→            {MESURE_FIELDS.map((f) => {
+   464→              const v = latest[f.key];
+   465→              return (
+   466→                <div
+   467→                  key={f.key}
+   468→                  className="rounded-lg border border-border bg-ivory-warm/50 px-3 py-3 text-center"
+   469→                >
+   470→                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground/80">
+   471→                    {f.label}
+   472→                  </p>
+   473→                  <p className="mt-1 font-display text-xl text-emerald-deep">
+   474→                    {v != null ? v : "—"}
+   475→                    {v != null ? (
+   476→                      <span className="ml-0.5 text-xs text-gold-deep">cm</span>
+   477→                    ) : null}
+   478→                  </p>
+   479→                </div>
+   480→              );
+   481→            })}
+   482→          </div>
+   483→
+   484→          {latest.notes ? (
+   485→            <div className="mt-4 rounded-lg border border-gold/20 bg-emerald/[0.04] p-3">
+   486→              <p className="text-xs uppercase tracking-wider text-muted-foreground/70">
+   487→                Notes de l&apos;atelier
+   488→              </p>
+   489→              <p className="mt-1 text-sm italic text-emerald-deep/90">
+   490→                « {latest.notes} »
+   491→              </p>
+   492→            </div>
+   493→          ) : null}
+   494→
+   495→          {mesures.length > 1 ? (
+   496→            <details className="mt-4 group">
+   497→              <summary className="flex cursor-pointer list-none items-center gap-1.5 text-xs uppercase tracking-wider text-gold-deep hover:text-gold">
+   498→                <ChevronRight className="h-3.5 w-3.5 transition-transform group-open:rotate-90" />
+   499→                Voir les relevés précédents ({mesures.length - 1})
+   500→              </summary>
+   501→              <ul className="mt-3 space-y-2">
+   502→                {mesures.slice(1).map((m, i) => (
+   503→                  <li
+   504→                    key={m.id ?? i}
+   505→                    className="rounded-md border border-border bg-ivory-warm/30 p-3 text-xs"
+   506→                  >
+   507→                    <p className="font-medium text-emerald-deep">
+   508→                      {formatDate(m.created_at)}
+   509→                    </p>
+   510→                    <p className="mt-1 text-muted-foreground">
+   511→                      Poitrine {m.tourPoitrine ?? "—"} · Taille{" "}
+   512→                      {m.tourTaille ?? "—"} · Hanches {m.tourHanches ?? "—"}
+   513→                    </p>
+   514→                  </li>
+   515→                ))}
+   516→              </ul>
+   517→            </details>
+   518→          ) : null}
+   519→
+   520→          <div className="mt-5 rounded-lg border border-emerald/15 bg-emerald/[0.03] p-3">
+   521→            <p className="text-sm italic text-emerald-deep/80">
+   522→              Ces mesures sont conservées pour faciliter vos futures commandes
+   523→              sur-mesure.
+   524→            </p>
+   525→          </div>
+   526→
+   527→          <div className="mt-5 flex justify-end">
+   528→            <Button
+   529→              onClick={onCommander}
+   530→              className="bg-emerald-deep hover:bg-emerald text-ivory"
+   531→            >
+   532→              Commander une nouvelle pièce
+   533→              <ArrowRight className="h-4 w-4" />
+   534→            </Button>
+   535→          </div>
+   536→        </>
+   537→      ) : (
+   538→        <p className="text-sm text-muted-foreground">
+   539→          Aucun relevé détaillé disponible.
+   540→        </p>
+   541→      )}
+   542→    </div>
+   543→  );
+   544→}
+   545→
+   546→/* ------------------------------------------------------------------ */
+   547→/*  Search Card                                                        */
+   548→/* ------------------------------------------------------------------ */
+   549→
+   550→function SearchCard({
+   551→  title,
+   552→  description,
+   553→  icon: Icon,
+   554→  inputId,
+   555→  label,
+   556→  placeholder,
+   557→  value,
+   558→  onChange,
+   559→  onSubmit,
+   560→  loading,
+   561→  children,
+   562→}: {
+   563→  title: string;
+   564→  description: string;
+   565→  icon: React.ComponentType<{ className?: string }>;
+   566→  inputId: string;
+   567→  label: string;
+   568→  placeholder: string;
+   569→  value: string;
+   570→  onChange: (v: string) => void;
+   571→  onSubmit: () => void;
+   572→  loading: boolean;
+   573→  children?: React.ReactNode;
+   574→}) {
+   575→  return (
+   576→    <Card className="paper flex flex-col gap-4 border border-gold/25 p-5 sm:p-6 shadow-sm">
+   577→      <div className="flex items-start gap-3">
+   578→        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-gold/40 bg-ivory text-gold-deep">
+   579→          <Icon className="h-5 w-5" />
+   580→        </div>
+   581→        <div>
+   582→          <h3 className="font-display text-xl text-emerald-deep">{title}</h3>
+   583→          <p className="text-sm text-muted-foreground">{description}</p>
+   584→        </div>
+   585→      </div>
+   586→
+   587→      <form
+   588→        onSubmit={(e) => {
+   589→          e.preventDefault();
+   590→          onSubmit();
+   591→        }}
+   592→        className="flex flex-col gap-2 sm:flex-row sm:items-end"
+   593→      >
+   594→        <div className="flex-1">
+   595→          <Label htmlFor={inputId} className="mb-1.5 block text-xs uppercase tracking-wider text-gold-deep">
+   596→            {label}
+   597→          </Label>
+   598→          <Input
+   599→            id={inputId}
+   600→            value={value}
+   601→            onChange={(e) => onChange(e.target.value)}
+   602→            placeholder={placeholder}
+   603→            className="border-gold/30 bg-white/70 focus-visible:border-gold focus-visible:ring-gold/30"
+   604→          />
+   605→        </div>
+   606→        <Button
+   607→          type="submit"
+   608→          disabled={loading || !value.trim()}
+   609→          className="bg-emerald-deep text-ivory hover:bg-emerald sm:min-w-32"
+   610→        >
+   611→          {loading ? (
+   612→            <>
+   613→              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-ivory/40 border-t-ivory" />
+   614→              Recherche…
+   615→            </>
+   616→          ) : (
+   617→            <>
+   618→              <Search className="h-4 w-4" />
+   619→              Rechercher
+   620→            </>
+   621→          )}
+   622→        </Button>
+   623→      </form>
+   624→
+   625→      {children}
+   626→    </Card>
+   627→  );
+   628→}
+   629→
+   630→/* ------------------------------------------------------------------ */
+   631→/*  Empty State                                                        */
+   632→/* ------------------------------------------------------------------ */
+   633→
+   634→function EmptyState() {
+   635→  const { ref, visible } = useReveal<HTMLDivElement>();
+   636→  const revealClass = visible ? "in-view" : "";
+   637→  return (
+   638→    <div
+   639→      ref={ref}
+   640→      className={`reveal ${revealClass} mt-10 rounded-2xl border border-dashed border-gold/30 bg-ivory-warm/40 px-6 py-14 text-center`}
+   641→    >
+   642→      <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full border border-gold/30 bg-white">
+   643→        <NadiraMonogram className="h-12 w-12" />
+   644→      </div>
+   645→      <h3 className="font-display text-2xl text-emerald-deep">
+   646→        Votre espace, à portée de main
+   647→      </h3>
+   648→      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+   649→        Entrez votre numéro de commande ou votre numéro de téléphone pour
+   650→        accéder à votre espace.
+   651→      </p>
+   652→      <GoldDivider className="opacity-60" />
+   653→      <div className="mx-auto max-w-md grid grid-cols-1 gap-3 sm:grid-cols-2">
+   654→        <div className="rounded-lg border border-gold/20 bg-white/60 p-3 text-left">
+   655→          <p className="text-[11px] uppercase tracking-wider text-gold-deep">
+   656→            Format de référence
+   657→          </p>
+   658→          <p className="font-display text-sm text-emerald-deep">
+   659→            NAD-AAAAJJMM-XXXX
+   660→          </p>
+   661→          <p className="mt-0.5 text-[11px] text-muted-foreground">
+   662→            ex. NAD-20240115-3F7K
+   663→          </p>
+   664→        </div>
+   665→        <div className="rounded-lg border border-gold/20 bg-white/60 p-3 text-left">
+   666→          <p className="text-[11px] uppercase tracking-wider text-gold-deep">
+   667→            Téléphone
+   668→          </p>
+   669→          <p className="font-display text-sm text-emerald-deep">
+   670→            +212 6 61 23 45 67
+   671→          </p>
+   672→          <p className="mt-0.5 text-[11px] text-muted-foreground">
+   673→            Celui utilisé lors de votre commande
+   674→          </p>
+   675→        </div>
+   676→      </div>
+   677→    </div>
+   678→  );
+   679→}
+   680→
+   681→/* ------------------------------------------------------------------ */
+   682→/*  Help Section                                                       */
+   683→/* ------------------------------------------------------------------ */
+   684→
+   685→function HelpSection({ atelierTel, atelierWhatsapp }: { atelierTel: string; atelierWhatsapp: string }) {
+   686→  const steps = [
+   687→    {
+   688→      n: "01",
+   689→      title: "Commandez en ligne",
+   690→      text: "Choisissez une pièce dans nos collections ou commandez sur-mesure.",
+   691→    },
+   692→    {
+   693→      n: "02",
+   694→      title: "Recevez votre référence",
+   695→      text: "Une référence unique vous est attribuée à la validation de la commande.",
+   696→    },
+   697→    {
+   698→      n: "03",
+   699→      title: "Suivez et retirez",
+   700→      text: "Suivez la confection en temps réel puis retirez votre pièce à l'atelier.",
+   701→    },
+   702→  ];
+   703→  return (
+   704→    <section className="velvet-deep text-ivory">
+   705→      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
+   706→        <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
+   707→          {/* Left: lost reference help */}
+   708→          <div>
+   709→            <p className="text-xs uppercase tracking-[0.3em] text-gold-light">
+   710→              Besoin d&apos;aide ?
+   711→            </p>
+   712→            <h3 className="mt-2 font-display text-3xl text-gold-gradient">
+   713→              Vous n&apos;avez pas votre numéro de commande ?
+   714→            </h3>
+   715→            <p className="mt-3 max-w-md text-ivory/75">
+   716→              Contactez l&apos;atelier : nous retrouverons votre commande à
+   717→              partir de votre nom et téléphone.
+   718→            </p>
+   719→            <div className="mt-5 flex flex-wrap gap-3">
+   720→              <Button
+   721→                asChild
+   722→                className="bg-gold text-emerald-deep hover:bg-gold-light"
+   723→              >
+   724→                <a href={`tel:${atelierTel}`}>
+   725→                  <Phone className="h-4 w-4" />
+   726→                  {atelierTel}
+   727→                </a>
+   728→              </Button>
+   729→              <Button
+   730→                asChild
+   731→                variant="outline"
+   732→                className="border-gold/40 text-gold-light hover:bg-gold/10"
+   733→              >
+   734→                <a
+   735→                  href={whatsappLink(
+   736→                    atelierWhatsapp,
+   737→                    "Bonjour NADIRA, je n'ai pas retrouvé mon numéro de commande.",
+   738→                  )}
+   739→                  target="_blank"
+   740→                  rel="noreferrer"
+   741→                >
+   742→                  <MessageCircle className="h-4 w-4" />
+   743→                  WhatsApp
+   744→                </a>
+   745→              </Button>
+   746→            </div>
+   747→          </div>
+   748→
+   749→          {/* Right: how it works */}
+   750→          <div>
+   751→            <p className="text-xs uppercase tracking-[0.3em] text-gold-light">
+   752→              Comment ça marche ?
+   753→            </p>
+   754→            <h3 className="mt-2 font-display text-3xl text-gold-gradient">
+   755→              Trois étapes simples
+   756→            </h3>
+   757→            <ol className="mt-5 space-y-4">
+   758→              {steps.map((s) => (
+   759→                <li key={s.n} className="flex gap-4">
+   760→                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-gold/40 text-sm font-display text-gold-light">
+   761→                    {s.n}
+   762→                  </div>
+   763→                  <div>
+   764→                    <p className="font-display text-lg text-ivory">{s.title}</p>
+   765→                    <p className="text-sm text-ivory/70">{s.text}</p>
+   766→                  </div>
+   767→                </li>
+   768→              ))}
+   769→            </ol>
+   770→          </div>
+   771→        </div>
+   772→
+   773→        <div className="mt-12 flex items-center justify-center gap-2 text-gold-light/70">
+   774→          <KhatimStar className="h-3 w-3" />
+   775→          <span className="text-[11px] uppercase tracking-[0.3em]">
+   776→            NADIRA Couture · Atelier de Fès
+   777→          </span>
+   778→          <KhatimStar className="h-3 w-3" />
+   779→        </div>
+   780→      </div>
+   781→    </section>
+   782→  );
+   783→}
+   784→
+   785→/* ------------------------------------------------------------------ */
+   786→/*  Main View                                                          */
+   787→/* ------------------------------------------------------------------ */
+   788→
+   789→export function EspaceClientView() {
+   790→  const { setView, clientCommandeRef, setClientCommandeRef } = useStore();
+   791→
+   792→  const [refInput, setRefInput] = useState("");
+   793→  const [telInput, setTelInput] = useState("");
+   794→
+   795→  const [commande, setCommande] = useState<Commande | null>(null);
+   796→  const [mesures, setMesures] = useState<Mesure[] | null>(null);
+   797→
+   798→  const [loadingCommande, setLoadingCommande] = useState(false);
+   799→  const [loadingMesures, setLoadingMesures] = useState(false);
+   800→
+   801→  const [errorCommande, setErrorCommande] = useState<string | null>(null);
+   802→  const [errorMesures, setErrorMesures] = useState<string | null>(null);
+   803→
+   804→  const [contenu, setContenu] = useState<Record<string, string>>({});
+   805→
+   806→  // Fetch contenu (atelier contact info) once on mount.
+   807→  useEffect(() => {
+   808→    api<Contenu[]>("/api/contenu")
+   809→      .then((data) => {
+   810→        const map: Record<string, string> = {};
+   811→        data.forEach((c) => (map[c.cle] = c.valeur));
+   812→        setContenu(map);
+   813→      })
+   814→      .catch(() => {});
+   815→  }, []);
+   816→
+   817→  const searchCommande = useCallback(async (reference: string) => {
+   818→    const ref = reference.trim();
+   819→    if (!ref) return;
+   820→    setLoadingCommande(true);
+   821→    setErrorCommande(null);
+   822→    setCommande(null);
+   823→    try {
+   824→      const data = await api<Commande>(
+   825→        `/api/commandes?reference=${encodeURIComponent(ref)}`,
+   826→      );
+   827→      setCommande(data);
+   828→    } catch {
+   829→      // API returns 404 when not found
+   830→      setErrorCommande("Aucune commande trouvée avec cette référence.");
+   831→    } finally {
+   832→      setLoadingCommande(false);
+   833→    }
+   834→  }, []);
+   835→
+   836→  const searchMesures = useCallback(async (telephone: string) => {
+   837→    const tel = telephone.trim();
+   838→    if (!tel) return;
+   839→    setLoadingMesures(true);
+   840→    setErrorMesures(null);
+   841→    setMesures(null);
+   842→    try {
+   843→      const data = await api<Mesure[]>(
+   844→        `/api/mesures?telephone=${encodeURIComponent(tel)}`,
+   845→      );
+   846→      if (!Array.isArray(data) || data.length === 0) {
+   847→        setErrorMesures("Aucune mesure enregistrée pour ce numéro.");
+   848→      } else {
+   849→        setMesures(data);
+   850→      }
+   851→    } catch {
+   852→      setErrorMesures("Aucune mesure enregistrée pour ce numéro.");
+   853→    } finally {
+   854→      setLoadingMesures(false);
+   855→    }
+   856→  }, []);
+   857→
+   858→  // Prefill reference + auto-search if coming from a placed order.
+   859→  useEffect(() => {
+   860→    if (clientCommandeRef) {
+   861→      setRefInput(clientCommandeRef);
+   862→      // Trigger search directly
+   863→      void searchCommande(clientCommandeRef);
+   864→      // Clear so it doesn't retrigger on view re-entry
+   865→      setClientCommandeRef(null);
+   866→    }
+   867→  }, [clientCommandeRef, searchCommande, setClientCommandeRef]);
+   868→
+   869→  const atelierTel = contenu.contact_telephone || "+212 5 35 63 42 18";
+   870→  const atelierWhatsapp = contenu.contact_whatsapp || "+212 6 61 23 45 67";
+   871→
+   872→  const nothingSearched =
+   873→    !commande &&
+   874→    !mesures &&
+   875→    !errorCommande &&
+   876→    !errorMesures &&
+   877→    !loadingCommande &&
+   878→    !loadingMesures;
+   879→
+   880→  return (
+   881→    <div className="flex flex-col">
+   882→      {/* Hero */}
+   883→      <section className="velvet-deep text-ivory">
+   884→        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 text-center">
+   885→          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-gold/40">
+   886→            <NadiraMonogram className="h-9 w-9" />
+   887→          </div>
+   888→          <p className="text-xs uppercase tracking-[0.4em] text-gold-light">
+   889→            Maison NADIRA
+   890→          </p>
+   891→          <h1 className="mt-2 font-display text-5xl text-gold-gradient sm:text-6xl">
+   892→            Espace Client
+   893→          </h1>
+   894→          <p className="mt-3 text-ivory/75 font-serif-alt text-lg">
+   895→            Suivez vos commandes et retrouvez vos mesures
+   896→          </p>
+   897→          <GoldDivider className="opacity-70" />
+   898→        </div>
+   899→      </section>
+   900→
+   901→      {/* Main */}
+   902→      <main className="paper flex-1">
+   903→        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+   904→          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+   905→            {/* Card A — Suivre une commande */}
+   906→            <SearchCard
+   907→              title="Suivre une commande"
+   908→              description="Saisissez votre numéro de référence pour suivre l'avancement de votre commande."
+   909→              icon={Package}
+   910→              inputId="input-reference"
+   911→              label="Numéro de commande"
+   912→              placeholder="NAD-20240115-XXXX"
+   913→              value={refInput}
+   914→              onChange={setRefInput}
+   915→              onSubmit={() => searchCommande(refInput)}
+   916→              loading={loadingCommande}
+   917→            >
+   918→              {loadingCommande ? null : errorCommande ? (
+   919→                <p className="rounded-md border border-rose-200 bg-rose-50/70 px-3 py-2 text-sm text-rose-700">
+   920→                  {errorCommande}
+   921→                </p>
+   922→              ) : commande ? (
+   923→                <OrderTrackingCard
+   924→                  commande={commande}
+   925→                  atelierTel={atelierTel}
+   926→                  onExplore={() => setView("collections")}
+   927→                />
+   928→              ) : null}
+   929→            </SearchCard>
+   930→
+   931→            {/* Card B — Mes mesures */}
+   932→            <SearchCard
+   933→              title="Mes mesures"
+   934→              description="Saisissez votre numéro de téléphone pour retrouver vos mensurations enregistrées."
+   935→              icon={Ruler}
+   936→              inputId="input-telephone"
+   937→              label="Téléphone"
+   938→              placeholder="+212 6 61 23 45 67"
+   939→              value={telInput}
+   940→              onChange={setTelInput}
+   941→              onSubmit={() => searchMesures(telInput)}
+   942→              loading={loadingMesures}
+   943→            >
+   944→              {loadingMesures ? null : errorMesures ? (
+   945→                <p className="rounded-md border border-rose-200 bg-rose-50/70 px-3 py-2 text-sm text-rose-700">
+   946→                  {errorMesures}
+   947→                </p>
+   948→              ) : mesures ? (
+   949→                <MesuresCard
+   950→                  mesures={mesures}
+   951→                  onCommander={() => setView("sur-mesure")}
+   952→                />
+   953→              ) : null}
+   954→            </SearchCard>
+   955→          </div>
+   956→
+   957→          {nothingSearched ? <EmptyState /> : null}
+   958→        </div>
+   959→      </main>
+   960→
+   961→      <HelpSection atelierTel={atelierTel} atelierWhatsapp={atelierWhatsapp} />
+   962→    </div>
+   963→  );
+   964→}
+   965→

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useStore } from "@/lib/store";
-import { NadiraWordmark, KhatimStar } from "./brand";
+import { KhatimStar } from "./brand";
 import { cn } from "@/lib/utils";
-import { Menu, X, Search, ShoppingBag, User, Phone } from "lucide-react";
+import { Menu, X, Search, ShoppingBag, User } from "lucide-react";
 
 const NAV_ITEMS: { label: string; view: Parameters<ReturnType<typeof useStore.getState>["setView"]>[0] }[] = [
   { label: "Accueil", view: "accueil" },
@@ -17,17 +17,9 @@ const NAV_ITEMS: { label: string; view: Parameters<ReturnType<typeof useStore.ge
 
 export function Header() {
   const { view, setView, setFilters } = useStore();
-  const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchVal, setSearchVal] = useState("");
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   const go = (v: typeof view) => {
     setView(v);
@@ -44,12 +36,7 @@ export function Header() {
 
   return (
     <header
-      className={cn(
-        "sticky top-0 z-50 transition-all duration-500",
-        scrolled
-          ? "velvet-deep shadow-lg shadow-emerald-deep/30 backdrop-blur-md"
-          : "velvet-deep/95 backdrop-blur-sm"
-      )}
+      className="sticky top-0 z-50 velvet-deep shadow-lg shadow-emerald-deep/30"
     >
       {/* Top utility bar */}
       <div className="hidden md:flex items-center justify-center gap-6 border-b border-gold/15 py-1.5 text-[11px] tracking-wider text-ivory/70">
@@ -58,13 +45,9 @@ export function Header() {
           Livraison soignée dans tout le Maroc
         </span>
         <span className="h-3 w-px bg-gold/20" />
-        <a href="tel:+212535634218" className="flex items-center gap-1.5 hover:text-gold-light transition-colors">
-          <Phone className="h-3 w-3" /> +212 5 35 63 42 18
-        </a>
-        <span className="h-3 w-px bg-gold/20" />
         <span className="flex items-center gap-1.5">
           <KhatimStar className="h-3 w-3 text-gold/70" />
-          Atelier · Fès
+          Atelier · Agadir
         </span>
       </div>
 
@@ -79,9 +62,17 @@ export function Header() {
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
 
-          {/* Logo */}
-          <button onClick={() => go("accueil")} className="shrink-0 lg:absolute lg:left-1/2 lg:-translate-x-1/2">
-            <NadiraWordmark onDark />
+          {/* Logo — used exactly as-is, no cropping or resizing */}
+          <button
+            onClick={() => go("accueil")}
+            className="shrink-0 lg:absolute lg:left-1/2 lg:-translate-x-1/2 flex items-center"
+            aria-label="NADIRA Couture — accueil"
+          >
+            <img
+              src="/nadira-logo-v2.png"
+              alt="NADIRA Couture"
+              className="h-12 sm:h-14 w-auto object-contain"
+            />
           </button>
 
           {/* Desktop nav */}

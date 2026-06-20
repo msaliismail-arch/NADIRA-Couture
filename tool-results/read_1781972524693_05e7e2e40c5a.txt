@@ -1,0 +1,1158 @@
+     1→"use client";
+     2→
+     3→import { useEffect, useMemo, useState } from "react";
+     4→import { useStore } from "@/lib/store";
+     5→import { api, formatMAD } from "@/lib/api";
+     6→import type { Produit, Categorie, Artisan } from "@/lib/types";
+     7→import { NadiraMonogram, GoldDivider, KhatimStar } from "@/components/nadira/brand";
+     8→import { useReveal } from "@/hooks/use-reveal";
+     9→import { Button } from "@/components/ui/button";
+    10→import { Input } from "@/components/ui/input";
+    11→import { Label } from "@/components/ui/label";
+    12→import { Badge } from "@/components/ui/badge";
+    13→import { Separator } from "@/components/ui/separator";
+    14→import {
+    15→  Dialog,
+    16→  DialogContent,
+    17→  DialogHeader,
+    18→  DialogTitle,
+    19→  DialogDescription,
+    20→  DialogFooter,
+    21→} from "@/components/ui/dialog";
+    22→import {
+    23→  ArrowLeft,
+    24→  ArrowRight,
+    25→  Check,
+    26→  ChevronRight,
+    27→  Minus,
+    28→  Plus,
+    29→  Ruler,
+    30→  Scissors,
+    31→  ShoppingBag,
+    32→  Truck,
+    33→  Calendar,
+    34→  ZoomIn,
+    35→} from "lucide-react";
+    36→
+    37→/** Couleur → hex (NADIRA palette + extensions courantes). */
+    38→const COLOR_HEX: Record<string, string> = {
+    39→  "émeraude": "#0E3B2E",
+    40→  "emeraude": "#0E3B2E",
+    41→  "bordeaux": "#7A1F1F",
+    42→  "bleu nuit": "#1B2845",
+    43→  "or": "#C9A24B",
+    44→  "ivoire": "#F4EDE0",
+    45→  "champagne": "#E5D5B7",
+    46→  "écru": "#E8DFC8",
+    47→  "ecru": "#E8DFC8",
+    48→  "sable": "#D4C4A0",
+    49→  "terracotta": "#C66B3D",
+    50→  "vert": "#2D5F3F",
+    51→  "rose poudré": "#E8C4C4",
+    52→  "rose poudre": "#E8C4C4",
+    53→  "nacre": "#F2EEE5",
+    54→  "argent": "#C0C0C0",
+    55→  "blush": "#F4D4D4",
+    56→  "bleu": "#3B5998",
+    57→  "anthracite": "#2C2C2C",
+    58→  "noir": "#1A1A1A",
+    59→  "vert sapin": "#2C4A3A",
+    60→};
+    61→
+    62→function colorHex(name: string): string {
+    63→  const key = name.trim().toLowerCase();
+    64→  return COLOR_HEX[key] ?? "#9C9078";
+    65→}
+    66→
+    67→/** The product's artisans property is shaped by Prisma include:
+    68→ * { artisans: [{ idProduit, idArtisan, artisan: Artisan }] }
+    69→ * We flatten to Artisan[] here.
+    70→ */
+    71→type ProduitDetail = Produit & {
+    72→  artisans?: { artisan: Artisan }[];
+    73→};
+    74→
+    75→export function ProduitView() {
+    76→  const { produitSlug, setView } = useStore();
+    77→
+    78→  // Redirect to collections if no slug
+    79→  useEffect(() => {
+    80→    if (!produitSlug) {
+    81→      setView("collections");
+    82→    }
+    83→  }, [produitSlug, setView]);
+    84→
+    85→  if (!produitSlug) return null;
+    86→
+    87→  // `key` ensures fresh state on every slug change — no synchronous
+    88→  // setState-in-effect needed for resetting loading/error/etc.
+    89→  return <ProduitViewInner key={produitSlug} slug={produitSlug} />;
+    90→}
+    91→
+    92→function ProduitViewInner({ slug }: { slug: string }) {
+    93→  const { setView, openProduit } = useStore();
+    94→
+    95→  const [produit, setProduit] = useState<ProduitDetail | null>(null);
+    96→  const [loading, setLoading] = useState(true);
+    97→  const [error, setError] = useState<string | null>(null);
+    98→
+    99→  const [related, setRelated] = useState<Produit[]>([]);
+   100→  const [relatedLoading, setRelatedLoading] = useState(false);
+   101→
+   102→  const [activePhoto, setActivePhoto] = useState(0);
+   103→  const [selectedColor, setSelectedColor] = useState<string>("");
+   104→  const [surMesure, setSurMesure] = useState(false);
+   105→  const [qty, setQty] = useState(1);
+   106→  const [orderOpen, setOrderOpen] = useState(false);
+   107→
+   108→  const { ref: sectionRef, visible: sectionVisible } = useReveal<HTMLDivElement>();
+   109→
+   110→  // Fetch product detail (initial mount only — keyed by slug)
+   111→  useEffect(() => {
+   112→    let cancelled = false;
+   113→    api<ProduitDetail>(`/api/produits/${encodeURIComponent(slug)}`)
+   114→      .then((data) => {
+   115→        if (cancelled) return;
+   116→        setProduit(data);
+   117→        const colors = parseCouleurs(data.couleurs);
+   118→        setSelectedColor(colors[0] ?? "");
+   119→        setLoading(false);
+   120→        // Fetch related
+   121→        if (data.categorie?.slug) {
+   122→          setRelatedLoading(true);
+   123→          api<Produit[]>(
+   124→            `/api/produits?categorie=${encodeURIComponent(data.categorie.slug)}`
+   125→          )
+   126→            .then((items) =>
+   127→              setRelated(items.filter((p) => p.id !== data.id).slice(0, 4))
+   128→            )
+   129→            .catch(() => setRelated([]))
+   130→            .finally(() => setRelatedLoading(false));
+   131→        }
+   132→      })
+   133→      .catch((e: unknown) => {
+   134→        if (cancelled) return;
+   135→        setError(e instanceof Error ? e.message : "Produit introuvable");
+   136→        setLoading(false);
+   137→      });
+   138→    return () => {
+   139→      cancelled = true;
+   140→    };
+   141→  }, [slug]);
+   142→
+   143→  return (
+   144→    <div className="min-h-screen paper">
+   145→      {/* Breadcrumb */}
+   146→      <div className="border-b border-gold/15 bg-ivory-warm/60">
+   147→        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
+   148→          <Breadcrumb
+   149→            items={[
+   150→              { label: "Accueil", onClick: () => setView("accueil") },
+   151→              { label: "Collections", onClick: () => setView("collections") },
+   152→              {
+   153→                label: produit?.categorie?.libelle ?? "Catégorie",
+   154→                onClick: () => {
+   155→                  useStore.getState().setFilters({
+   156→                    categorie: produit?.categorie?.slug ?? null,
+   157→                  });
+   158→                  setView("collections");
+   159→                },
+   160→              },
+   161→              { label: produit?.nom ?? "Pièce" },
+   162→            ]}
+   163→          />
+   164→        </div>
+   165→      </div>
+   166→
+   167→      {loading ? (
+   168→        <DetailSkeleton />
+   169→      ) : error || !produit ? (
+   170→        <div className="mx-auto max-w-3xl px-4 py-24 text-center">
+   171→          <KhatimStar className="h-16 w-16 text-gold/40 mx-auto mb-6" />
+   172→          <h2 className="font-display text-2xl text-emerald-deep mb-3">
+   173→            {error || "Pièce introuvable"}
+   174→          </h2>
+   175→          <Button
+   176→            onClick={() => setView("collections")}
+   177→            className="rounded-full bg-emerald text-ivory hover:bg-emerald-soft"
+   178→          >
+   179→            Retour aux collections
+   180→          </Button>
+   181→        </div>
+   182→      ) : (
+   183→        <>
+   184→          {/* Two-column layout */}
+   185→          <section
+   186→            ref={sectionRef}
+   187→            className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12 reveal ${
+   188→              sectionVisible ? "in-view" : ""
+   189→            }`}
+   190→          >
+   191→            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+   192→              {/* LEFT — Gallery */}
+   193→              <Gallery
+   194→                photos={parsePhotos(produit.photos)}
+   195→                activePhoto={activePhoto}
+   196→                setActivePhoto={setActivePhoto}
+   197→                alt={produit.nom}
+   198→              />
+   199→
+   200→              {/* RIGHT — Info */}
+   201→              <div className="flex flex-col">
+   202→                {produit.categorie && (
+   203→                  <p className="text-xs uppercase tracking-[0.25em] text-gold-deep mb-3">
+   204→                    {produit.categorie.libelle}
+   205→                  </p>
+   206→                )}
+   207→                <h1 className="font-display text-4xl lg:text-5xl text-emerald-deep leading-tight mb-3">
+   208→                  {produit.nom}
+   209→                </h1>
+   210→                <p className="font-display text-3xl text-gold-deep mb-1">
+   211→                  {formatMAD(produit.prix)}
+   212→                </p>
+   213→                {produit.occasion && (
+   214→                  <p className="text-sm text-muted-foreground italic mb-4">
+   215→                    Pour {produit.occasion.toLowerCase()}
+   216→                  </p>
+   217→                )}
+   218→
+   219→                <GoldDivider className="!justify-start opacity-70 my-2" />
+   220→
+   221→                <p className="text-foreground/80 leading-relaxed text-[15px] mb-6">
+   222→                  {produit.description}
+   223→                </p>
+   224→
+   225→                {/* Fabric + delay + stock */}
+   226→                <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+   227→                  <DetailLine label="Tissu" value={produit.tissu} />
+   228→                  <DetailLine
+   229→                    label="Délai de confection"
+   230→                    value={`${produit.delaiRealisation} jours`}
+   231→                  />
+   232→                  <DetailLine
+   233→                    label="Disponibilité"
+   234→                    value={
+   235→                      produit.stock > 0
+   236→                        ? `${produit.stock} en atelier`
+   237→                        : "Sur commande"
+   238→                    }
+   239→                  />
+   240→                  <DetailLine
+   241→                    label="Référence"
+   242→                    value={`#${produit.id.toString().padStart(4, "0")}`}
+   243→                  />
+   244→                </div>
+   245→
+   246→                {/* Colors */}
+   247→                <ColorPicker
+   248→                  colors={parseCouleurs(produit.couleurs)}
+   249→                  value={selectedColor}
+   250→                  onChange={setSelectedColor}
+   251→                />
+   252→
+   253→                {/* Type de commande */}
+   254→                <div className="mb-6">
+   255→                  <p className="text-xs uppercase tracking-[0.2em] text-gold-deep mb-3">
+   256→                    Type de commande
+   257→                  </p>
+   258→                  <div className="grid grid-cols-2 gap-3">
+   259→                    <TypeCard
+   260→                      active={!surMesure}
+   261→                      onClick={() => setSurMesure(false)}
+   262→                      icon={<ShoppingBag className="h-5 w-5" />}
+   263→                      label="Modèle standard"
+   264→                      hint="Depuis l'atelier"
+   265→                    />
+   266→                    <TypeCard
+   267→                      active={surMesure}
+   268→                      onClick={() => setSurMesure(true)}
+   269→                      icon={<Scissors className="h-5 w-5" />}
+   270→                      label="Sur-mesure"
+   271→                      hint="Couture à vos mesures"
+   272→                    />
+   273→                  </div>
+   274→                  {surMesure && (
+   275→                    <div className="mt-3 rounded-lg border border-gold/30 bg-gold/5 px-4 py-3 text-sm text-emerald-deep flex items-start gap-2.5">
+   276→                      <Ruler className="h-4 w-4 mt-0.5 text-gold-deep shrink-0" />
+   277→                      <div>
+   278→                        Nous vous contacterons pour vos mesures.
+   279→                        <button
+   280→                          onClick={() => setView("sur-mesure")}
+   281→                          className="ml-1 underline text-gold-deep hover:text-gold"
+   282→                        >
+   283→                          Prendre rendez-vous
+   284→                        </button>
+   285→                      </div>
+   286→                    </div>
+   287→                  )}
+   288→                </div>
+   289→
+   290→                {/* Quantity + CTAs */}
+   291→                <div className="flex items-center gap-4 mb-5">
+   292→                  <p className="text-xs uppercase tracking-[0.2em] text-gold-deep">
+   293→                    Quantité
+   294→                  </p>
+   295→                  <div className="flex items-center rounded-full border border-gold/30 bg-card">
+   296→                    <button
+   297→                      onClick={() => setQty((q) => Math.max(1, q - 1))}
+   298→                      className="h-9 w-9 flex items-center justify-center text-emerald-deep hover:bg-gold/10 rounded-l-full"
+   299→                      aria-label="Diminuer"
+   300→                    >
+   301→                      <Minus className="h-3.5 w-3.5" />
+   302→                    </button>
+   303→                    <span className="w-10 text-center text-sm font-medium text-emerald-deep">
+   304→                      {qty}
+   305→                    </span>
+   306→                    <button
+   307→                      onClick={() =>
+   308→                        setQty((q) =>
+   309→                          Math.min(produit.stock > 0 ? produit.stock : 99, q + 1)
+   310→                        )
+   311→                      }
+   312→                      className="h-9 w-9 flex items-center justify-center text-emerald-deep hover:bg-gold/10 rounded-r-full"
+   313→                      aria-label="Augmenter"
+   314→                    >
+   315→                      <Plus className="h-3.5 w-3.5" />
+   316→                    </button>
+   317→                  </div>
+   318→                </div>
+   319→
+   320→                <div className="flex flex-col sm:flex-row gap-3 mb-6">
+   321→                  <Button
+   322→                    onClick={() => setOrderOpen(true)}
+   323→                    className="flex-1 rounded-full bg-emerald text-ivory hover:bg-emerald-soft px-8 py-4 text-base font-display tracking-wide h-auto"
+   324→                  >
+   325→                    Commander cette pièce
+   326→                  </Button>
+   327→                  <Button
+   328→                    onClick={() => setView("sur-mesure")}
+   329→                    variant="outline"
+   330→                    className="flex-1 rounded-full border-gold/50 text-emerald-deep hover:bg-gold/10 hover:text-emerald-deep px-6 py-4 h-auto"
+   331→                  >
+   332→                    <Scissors className="h-4 w-4" />
+   333→                    Sur-mesure
+   334→                  </Button>
+   335→                </div>
+   336→
+   337→                {/* Reassurance row */}
+   338→                <div className="grid grid-cols-3 gap-3 pt-5 border-t border-gold/15">
+   339→                  <Reassurance
+   340→                    icon={<Truck className="h-5 w-5" />}
+   341→                    label="Livraison soignée"
+   342→                  />
+   343→                  <Reassurance
+   344→                    icon={<Scissors className="h-5 w-5" />}
+   345→                    label="Fait main"
+   346→                  />
+   347→                  <Reassurance
+   348→                    icon={<Calendar className="h-5 w-5" />}
+   349→                    label={`Délai : ${produit.delaiRealisation} j`}
+   350→                  />
+   351→                </div>
+   352→              </div>
+   353→            </div>
+   354→          </section>
+   355→
+   356→          {/* Artisans section */}
+   357→          {produit.artisans && produit.artisans.length > 0 && (
+   358→            <section className="velvet-deep text-ivory py-16">
+   359→              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+   360→                <div className="text-center mb-10">
+   361→                  <p className="text-xs uppercase tracking-[0.3em] text-gold-light mb-2">
+   362→                    Savoir-faire
+   363→                  </p>
+   364→                  <h2 className="font-display text-3xl sm:text-4xl text-gold-gradient">
+   365→                    Réalisé par
+   366→                  </h2>
+   367→                  <GoldDivider className="opacity-70" />
+   368→                </div>
+   369→                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+   370→                  {produit.artisans.map(({ artisan }) => (
+   371→                    <div
+   372→                      key={artisan.id}
+   373→                      className="velvet rounded-lg border border-gold/25 p-5 flex items-start gap-4"
+   374→                    >
+   375→                      <div className="h-12 w-12 rounded-full bg-gold/15 border border-gold/40 flex items-center justify-center shrink-0">
+   376→                        <KhatimStar className="h-6 w-6 text-gold-light" />
+   377→                      </div>
+   378→                      <div>
+   379→                        <p className="font-display text-lg text-gold-light leading-tight">
+   380→                          {artisan.nom}
+   381→                        </p>
+   382→                        <p className="text-xs uppercase tracking-wider text-ivory/60 mt-1">
+   383→                          {artisan.specialite}
+   384→                        </p>
+   385→                        {artisan.biographie && (
+   386→                          <p className="text-sm text-ivory/75 mt-2 leading-relaxed line-clamp-3">
+   387→                            {artisan.biographie}
+   388→                          </p>
+   389→                        )}
+   390→                      </div>
+   391→                    </div>
+   392→                  ))}
+   393→                </div>
+   394→              </div>
+   395→            </section>
+   396→          )}
+   397→
+   398→          {/* Related products */}
+   399→          {related.length > 0 && (
+   400→            <section className="paper py-16">
+   401→              <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+   402→                <div className="text-center mb-10">
+   403→                  <p className="text-xs uppercase tracking-[0.3em] text-gold-deep mb-2">
+   404→                    À découvrir
+   405→                  </p>
+   406→                  <h2 className="font-display text-3xl sm:text-4xl text-emerald-deep">
+   407→                    Vous aimerez aussi
+   408→                  </h2>
+   409→                  <GoldDivider className="opacity-70" />
+   410→                </div>
+   411→                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+   412→                  {related.map((p) => (
+   413→                    <RelatedCard
+   414→                      key={p.id}
+   415→                      produit={p}
+   416→                      onClick={() => openProduit(p.slug)}
+   417→                    />
+   418→                  ))}
+   419→                </div>
+   420→                {relatedLoading && related.length === 0 && (
+   421→                  <p className="text-center text-muted-foreground text-sm">
+   422→                    Chargement des suggestions...
+   423→                  </p>
+   424→                )}
+   425→              </div>
+   426→            </section>
+   427→          )}
+   428→
+   429→          {/* Order modal */}
+   430→          <OrderDialog
+   431→            open={orderOpen}
+   432→            onOpenChange={setOrderOpen}
+   433→            produit={produit}
+   434→            qty={qty}
+   435→            surMesure={surMesure}
+   436→            selectedColor={selectedColor}
+   437→          />
+   438→        </>
+   439→      )}
+   440→    </div>
+   441→  );
+   442→}
+   443→
+   444→/* =================== Sub-components =================== */
+   445→
+   446→function Breadcrumb({
+   447→  items,
+   448→}: {
+   449→  items: { label: string; onClick?: () => void }[];
+   450→}) {
+   451→  return (
+   452→    <nav className="flex items-center gap-1.5 text-xs tracking-wider text-muted-foreground flex-wrap">
+   453→      {items.map((it, i) => (
+   454→        <span key={i} className="flex items-center gap-1.5">
+   455→          {it.onClick ? (
+   456→            <button
+   457→              onClick={it.onClick}
+   458→              className="uppercase hover:text-gold-deep transition-colors"
+   459→            >
+   460→              {it.label}
+   461→            </button>
+   462→          ) : (
+   463→            <span className="uppercase text-emerald-deep truncate max-w-[160px]">
+   464→              {it.label}
+   465→            </span>
+   466→          )}
+   467→          {i < items.length - 1 && (
+   468→            <ChevronRight className="h-3 w-3 text-gold/50" />
+   469→          )}
+   470→        </span>
+   471→      ))}
+   472→    </nav>
+   473→  );
+   474→}
+   475→
+   476→function DetailLine({ label, value }: { label: string; value: string }) {
+   477→  return (
+   478→    <div>
+   479→      <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-0.5">
+   480→        {label}
+   481→      </p>
+   482→      <p className="text-sm text-emerald-deep font-medium">{value}</p>
+   483→    </div>
+   484→  );
+   485→}
+   486→
+   487→function Reassurance({
+   488→  icon,
+   489→  label,
+   490→}: {
+   491→  icon: React.ReactNode;
+   492→  label: string;
+   493→}) {
+   494→  return (
+   495→    <div className="flex flex-col items-center text-center gap-2">
+   496→      <span className="text-gold-deep">{icon}</span>
+   497→      <span className="text-[11px] tracking-wider uppercase text-muted-foreground leading-tight">
+   498→        {label}
+   499→      </span>
+   500→    </div>
+   501→  );
+   502→}
+   503→
+   504→function TypeCard({
+   505→  active,
+   506→  onClick,
+   507→  icon,
+   508→  label,
+   509→  hint,
+   510→}: {
+   511→  active: boolean;
+   512→  onClick: () => void;
+   513→  icon: React.ReactNode;
+   514→  label: string;
+   515→  hint: string;
+   516→}) {
+   517→  return (
+   518→    <button
+   519→      onClick={onClick}
+   520→      className={`relative text-left rounded-lg border p-4 transition-all ${
+   521→        active
+   522→          ? "border-emerald bg-emerald/5 ring-1 ring-emerald/30"
+   523→          : "border-gold/25 hover:border-gold/50 bg-card/40"
+   524→      }`}
+   525→    >
+   526→      <div className="flex items-center gap-2.5 mb-1">
+   527→        <span className={active ? "text-emerald" : "text-gold-deep"}>
+   528→          {icon}
+   529→        </span>
+   530→        <span className="font-display text-base text-emerald-deep">{label}</span>
+   531→      </div>
+   532→      <p className="text-xs text-muted-foreground">{hint}</p>
+   533→      {active && (
+   534→        <span className="absolute top-2 right-2 h-5 w-5 rounded-full bg-emerald text-ivory flex items-center justify-center">
+   535→          <Check className="h-3 w-3" />
+   536→        </span>
+   537→      )}
+   538→    </button>
+   539→  );
+   540→}
+   541→
+   542→function ColorPicker({
+   543→  colors,
+   544→  value,
+   545→  onChange,
+   546→}: {
+   547→  colors: string[];
+   548→  value: string;
+   549→  onChange: (c: string) => void;
+   550→}) {
+   551→  if (colors.length === 0) return null;
+   552→  return (
+   553→    <div className="mb-6">
+   554→      <p className="text-xs uppercase tracking-[0.2em] text-gold-deep mb-3">
+   555→        Couleur{colors.length > 1 ? "s" : ""} disponible{colors.length > 1 ? "s" : ""}
+   556→      </p>
+   557→      <div className="flex flex-wrap items-center gap-3">
+   558→        {colors.map((c) => {
+   559→          const hex = colorHex(c);
+   560→          const selected = value === c;
+   561→          return (
+   562→            <button
+   563→              key={c}
+   564→              onClick={() => onChange(c)}
+   565→              className="group flex flex-col items-center gap-1.5"
+   566→              title={c}
+   567→              aria-label={`Couleur ${c}`}
+   568→            >
+   569→              <span
+   570→                className={`h-9 w-9 rounded-full border-2 transition-all ${
+   571→                  selected
+   572→                    ? "ring-2 ring-gold ring-offset-2 ring-offset-ivory-warm border-ivory"
+   573→                    : "border-gold/30 group-hover:border-gold/60"
+   574→                }`}
+   575→                style={{ backgroundColor: hex }}
+   576→              />
+   577→              <span
+   578→                className={`text-[10px] tracking-wide capitalize transition-colors ${
+   579→                  selected
+   580→                    ? "text-emerald-deep font-medium"
+   581→                    : "text-muted-foreground"
+   582→                }`}
+   583→              >
+   584→                {c}
+   585→              </span>
+   586→            </button>
+   587→          );
+   588→        })}
+   589→      </div>
+   590→    </div>
+   591→  );
+   592→}
+   593→
+   594→function Gallery({
+   595→  photos,
+   596→  activePhoto,
+   597→  setActivePhoto,
+   598→  alt,
+   599→}: {
+   600→  photos: string[];
+   601→  activePhoto: number;
+   602→  setActivePhoto: (i: number) => void;
+   603→  alt: string;
+   604→}) {
+   605→  const [zoom, setZoom] = useState(false);
+   606→  const safePhotos = photos.length > 0 ? photos : ["/images/placeholder.jpg"];
+   607→  const main = safePhotos[Math.min(activePhoto, safePhotos.length - 1)];
+   608→
+   609→  return (
+   610→    <div className="flex flex-col gap-4 lg:sticky lg:top-28 lg:self-start">
+   611→      <div
+   612→        className="relative overflow-hidden rounded-lg gold-border aspect-[3/4] bg-muted group"
+   613→        onMouseEnter={() => setZoom(true)}
+   614→        onMouseLeave={() => setZoom(false)}
+   615→      >
+   616→        <img
+   617→          src={main}
+   618→          alt={alt}
+   619→          className={`h-full w-full object-cover transition-transform duration-700 ${
+   620→            zoom ? "scale-110" : "scale-100"
+   621→          }`}
+   622→        />
+   623→        <div className="absolute top-3 right-3 h-9 w-9 rounded-full bg-ivory/85 backdrop-blur-sm flex items-center justify-center text-emerald-deep shadow-md">
+   624→          <ZoomIn className="h-4 w-4" />
+   625→        </div>
+   626→      </div>
+   627→
+   628→      {safePhotos.length > 1 && (
+   629→        <div className="grid grid-cols-5 gap-2">
+   630→          {safePhotos.map((p, i) => (
+   631→            <button
+   632→              key={i}
+   633→              onClick={() => setActivePhoto(i)}
+   634→              className={`relative aspect-square overflow-hidden rounded-md border-2 transition-all ${
+   635→                i === activePhoto
+   636→                  ? "border-gold"
+   637→                  : "border-transparent opacity-70 hover:opacity-100"
+   638→              }`}
+   639→            >
+   640→              <img
+   641→                src={p}
+   642→                alt={`${alt} ${i + 1}`}
+   643→                className="h-full w-full object-cover"
+   644→              />
+   645→            </button>
+   646→          ))}
+   647→        </div>
+   648→      )}
+   649→    </div>
+   650→  );
+   651→}
+   652→
+   653→function RelatedCard({
+   654→  produit,
+   655→  onClick,
+   656→}: {
+   657→  produit: Produit;
+   658→  onClick: () => void;
+   659→}) {
+   660→  const photos = parsePhotos(produit.photos);
+   661→  const cover = photos[0] || "/images/placeholder.jpg";
+   662→  return (
+   663→    <article
+   664→      onClick={onClick}
+   665→      className="group cursor-pointer"
+   666→    >
+   667→      <div className="relative overflow-hidden rounded-lg gold-border aspect-[3/4] bg-muted">
+   668→        <img
+   669→          src={cover}
+   670→          alt={produit.nom}
+   671→          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+   672→          loading="lazy"
+   673→        />
+   674→        <div className="absolute inset-0 bg-gradient-to-t from-emerald-deep/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+   675→      </div>
+   676→      <div className="mt-3 px-1">
+   677→        {produit.categorie && (
+   678→          <p className="text-[10px] uppercase tracking-[0.22em] text-gold-deep mb-1">
+   679→            {produit.categorie.libelle}
+   680→          </p>
+   681→        )}
+   682→        <h3 className="font-display text-base text-emerald-deep leading-snug mb-1 group-hover:text-emerald transition-colors">
+   683→          {produit.nom}
+   684→        </h3>
+   685→        <p className="font-display text-base text-gold-deep">
+   686→          {formatMAD(produit.prix)}
+   687→        </p>
+   688→      </div>
+   689→    </article>
+   690→  );
+   691→}
+   692→
+   693→/* =================== Order Dialog (3-step) =================== */
+   694→
+   695→type OrderForm = {
+   696→  nom: string;
+   697→  prenom: string;
+   698→  telephone: string;
+   699→  email: string;
+   700→  notes: string;
+   701→};
+   702→
+   703→function OrderDialog({
+   704→  open,
+   705→  onOpenChange,
+   706→  produit,
+   707→  qty,
+   708→  surMesure,
+   709→  selectedColor,
+   710→}: {
+   711→  open: boolean;
+   712→  onOpenChange: (v: boolean) => void;
+   713→  produit: Produit;
+   714→  qty: number;
+   715→  surMesure: boolean;
+   716→  selectedColor: string;
+   717→}) {
+   718→  const { setView } = useStore();
+   719→  const [step, setStep] = useState(1);
+   720→  const [form, setForm] = useState<OrderForm>({
+   721→    nom: "",
+   722→    prenom: "",
+   723→    telephone: "",
+   724→    email: "",
+   725→    notes: "",
+   726→  });
+   727→  const [phoneError, setPhoneError] = useState<string | null>(null);
+   728→  const [submitting, setSubmitting] = useState(false);
+   729→  const [submitError, setSubmitError] = useState<string | null>(null);
+   730→  const [reference, setReference] = useState<string | null>(null);
+   731→
+   732→  // Reset when dialog opens
+   733→  useEffect(() => {
+   734→    if (open) {
+   735→      setStep(1);
+   736→      setPhoneError(null);
+   737→      setSubmitError(null);
+   738→      setReference(null);
+   739→      setSubmitting(false);
+   740→    }
+   741→  }, [open]);
+   742→
+   743→  const setField = (k: keyof OrderForm, v: string) =>
+   744→    setForm((f) => ({ ...f, [k]: v }));
+   745→
+   746→  const validatePhone = (raw: string) => {
+   747→    const digits = raw.replace(/\D/g, "");
+   748→    if (!digits) return "Le téléphone est requis";
+   749→    if (digits.length < 8) return "Numéro de téléphone invalide";
+   750→    return null;
+   751→  };
+   752→
+   753→  const goStep2 = () => {
+   754→    const err = validatePhone(form.telephone);
+   755→    setPhoneError(err);
+   756→    if (err) return;
+   757→    setStep(2);
+   758→  };
+   759→
+   760→  const submit = async () => {
+   761→    setSubmitting(true);
+   762→    setSubmitError(null);
+   763→    try {
+   764→      const body = {
+   765→        nom: form.nom,
+   766→        prenom: form.prenom,
+   767→        telephone: form.telephone,
+   768→        email: form.email || undefined,
+   769→        notes: form.notes || undefined,
+   770→        lignes: [
+   771→          {
+   772→            idProduit: produit.id,
+   773→            quantite: qty,
+   774→            surMesure,
+   775→            couleur: selectedColor || null,
+   776→            taille: null,
+   777→          },
+   778→        ],
+   779→      };
+   780→      const res = await api<{ commande: unknown; reference: string }>(
+   781→        "/api/commandes",
+   782→        {
+   783→          method: "POST",
+   784→          body: JSON.stringify(body),
+   785→        }
+   786→      );
+   787→      setReference(res.reference);
+   788→      setStep(3);
+   789→    } catch (e: unknown) {
+   790→      setSubmitError(
+   791→        e instanceof Error ? e.message : "Erreur lors de l'envoi de la demande"
+   792→      );
+   793→    } finally {
+   794→      setSubmitting(false);
+   795→    }
+   796→  };
+   797→
+   798→  return (
+   799→    <Dialog open={open} onOpenChange={onOpenChange}>
+   800→      <DialogContent className="sm:max-w-lg paper border-gold/30 max-h-[92vh] overflow-y-auto nadira-scroll">
+   801→        <DialogHeader className="sr-only">
+   802→          <DialogTitle>Commander {produit.nom}</DialogTitle>
+   803→          <DialogDescription>
+   804→            Finalisez votre demande de commande en trois étapes.
+   805→          </DialogDescription>
+   806→        </DialogHeader>
+   807→
+   808→        {/* Visual title + progress bar */}
+   809→        <div className="flex flex-col items-center text-center pt-2 pb-1">
+   810→          <NadiraMonogram className="h-10 w-10 mb-2" />
+   811→          <p className="text-xs uppercase tracking-[0.3em] text-gold-deep">
+   812→            {step === 3 ? "Demande envoyée" : "Votre commande"}
+   813→          </p>
+   814→          <h3 className="font-display text-2xl text-emerald-deep mt-1">
+   815→            {step === 3 ? "Merci" : produit.nom}
+   816→          </h3>
+   817→        </div>
+   818→
+   819→        {step < 3 && (
+   820→          <ProgressBar step={step} />
+   821→        )}
+   822→
+   823→        {/* STEP 1 — Recap */}
+   824→        {step === 1 && (
+   825→          <div className="space-y-5 px-1">
+   826→            <RecapCard
+   827→              produit={produit}
+   828→              qty={qty}
+   829→              surMesure={surMesure}
+   830→              selectedColor={selectedColor}
+   831→            />
+   832→
+   833→            <Separator className="bg-gold/15" />
+   834→
+   835→            <div className="space-y-4">
+   836→              <div className="grid grid-cols-2 gap-3">
+   837→                <Field label="Prénom">
+   838→                  <Input
+   839→                    value={form.prenom}
+   840→                    onChange={(e) => setField("prenom", e.target.value)}
+   841→                    placeholder="Votre prénom"
+   842→                    className="bg-card/60 border-gold/30"
+   843→                  />
+   844→                </Field>
+   845→                <Field label="Nom">
+   846→                  <Input
+   847→                    value={form.nom}
+   848→                    onChange={(e) => setField("nom", e.target.value)}
+   849→                    placeholder="Votre nom"
+   850→                    className="bg-card/60 border-gold/30"
+   851→                  />
+   852→                </Field>
+   853→              </div>
+   854→              <Field label="Téléphone" required>
+   855→                <Input
+   856→                  value={form.telephone}
+   857→                  onChange={(e) => {
+   858→                    setField("telephone", e.target.value);
+   859→                    if (phoneError) setPhoneError(null);
+   860→                  }}
+   861→                  placeholder="06 12 34 56 78"
+   862→                  inputMode="tel"
+   863→                  className={`bg-card/60 ${
+   864→                    phoneError
+   865→                      ? "border-destructive"
+   866→                      : "border-gold/30"
+   867→                  }`}
+   868→                />
+   869→                {phoneError && (
+   870→                  <p className="text-xs text-destructive mt-1">{phoneError}</p>
+   871→                )}
+   872→              </Field>
+   873→            </div>
+   874→
+   875→            <DialogFooter className="flex-row gap-2">
+   876→              <Button
+   877→                onClick={() => onOpenChange(false)}
+   878→                variant="outline"
+   879→                className="flex-1 rounded-full border-gold/40 text-emerald-deep hover:bg-gold/10"
+   880→              >
+   881→                Annuler
+   882→              </Button>
+   883→              <Button
+   884→                onClick={goStep2}
+   885→                className="flex-1 rounded-full bg-emerald text-ivory hover:bg-emerald-soft"
+   886→              >
+   887→                Continuer
+   888→                <ArrowRight className="h-4 w-4" />
+   889→              </Button>
+   890→            </DialogFooter>
+   891→          </div>
+   892→        )}
+   893→
+   894→        {/* STEP 2 — Coordonnées / mesures */}
+   895→        {step === 2 && (
+   896→          <div className="space-y-5 px-1">
+   897→            <RecapCard
+   898→              produit={produit}
+   899→              qty={qty}
+   900→              surMesure={surMesure}
+   901→              selectedColor={selectedColor}
+   902→              compact
+   903→            />
+   904→
+   905→            <Separator className="bg-gold/15" />
+   906→
+   907→            <div className="space-y-4">
+   908→              <Field label="Email (optionnel)">
+   909→                <Input
+   910→                  type="email"
+   911→                  value={form.email}
+   912→                  onChange={(e) => setField("email", e.target.value)}
+   913→                  placeholder="vous@exemple.com"
+   914→                  className="bg-card/60 border-gold/30"
+   915→                />
+   916→              </Field>
+   917→              <Field label="Notes pour l'atelier (optionnel)">
+   918→                <Input
+   919→                  value={form.notes}
+   920→                  onChange={(e) => setField("notes", e.target.value)}
+   921→                  placeholder="Une demande particulière..."
+   922→                  className="bg-card/60 border-gold/30"
+   923→                />
+   924→              </Field>
+   925→
+   926→              {surMesure && (
+   927→                <div className="rounded-lg border border-gold/30 bg-gold/5 px-4 py-3 text-sm text-emerald-deep flex items-start gap-2.5">
+   928→                  <Ruler className="h-4 w-4 mt-0.5 text-gold-deep shrink-0" />
+   929→                  <div>
+   930→                    Vos mesures seront prises lors du rendez-vous à l'atelier.
+   931→                    <button
+   932→                      onClick={() => {
+   933→                        onOpenChange(false);
+   934→                        setView("sur-mesure");
+   935→                      }}
+   936→                      className="ml-1 underline text-gold-deep hover:text-gold"
+   937→                    >
+   938→                      Réserver un créneau
+   939→                    </button>
+   940→                  </div>
+   941→                </div>
+   942→              )}
+   943→            </div>
+   944→
+   945→            {submitError && (
+   946→              <p className="text-sm text-destructive text-center">
+   947→                {submitError}
+   948→              </p>
+   949→            )}
+   950→
+   951→            {/* No payment note */}
+   952→            <div className="rounded-lg bg-emerald-deep/5 border border-emerald/15 px-4 py-3 text-xs text-emerald-deep text-center leading-relaxed">
+   953→              Aucun paiement en ligne — le règlement se fait directement avec
+   954→              notre équipe par téléphone ou à l'atelier.
+   955→            </div>
+   956→
+   957→            <DialogFooter className="flex-row gap-2">
+   958→              <Button
+   959→                onClick={() => setStep(1)}
+   960→                variant="outline"
+   961→                className="flex-1 rounded-full border-gold/40 text-emerald-deep hover:bg-gold/10"
+   962→              >
+   963→                <ArrowLeft className="h-4 w-4" />
+   964→                Retour
+   965→              </Button>
+   966→              <Button
+   967→                onClick={submit}
+   968→                disabled={submitting}
+   969→                className="flex-1 rounded-full bg-emerald text-ivory hover:bg-emerald-soft"
+   970→              >
+   971→                {submitting ? "Envoi..." : "Envoyer ma demande"}
+   972→              </Button>
+   973→            </DialogFooter>
+   974→          </div>
+   975→        )}
+   976→
+   977→        {/* STEP 3 — Confirmation */}
+   978→        {step === 3 && reference && (
+   979→          <div className="space-y-5 px-1 text-center">
+   980→            <div className="flex justify-center">
+   981→              <div className="h-20 w-20 rounded-full bg-emerald/10 border-2 border-gold flex items-center justify-center">
+   982→                <Check className="h-9 w-9 text-emerald" />
+   983→              </div>
+   984→            </div>
+   985→            <div>
+   986→              <h4 className="font-display text-2xl text-emerald-deep mb-2">
+   987→                Votre demande a été envoyée
+   988→              </h4>
+   989→              <p className="text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
+   990→                Notre équipe vous contacte sous peu pour finaliser votre
+   991→                commande.
+   992→              </p>
+   993→            </div>
+   994→
+   995→            <div className="rounded-lg border border-gold/30 bg-gold/5 px-5 py-4">
+   996→              <p className="text-[10px] uppercase tracking-[0.25em] text-gold-deep mb-1">
+   997→                Votre référence
+   998→              </p>
+   999→              <p className="font-display text-xl text-emerald-deep tracking-wider">
+  1000→                {reference}
+  1001→              </p>
+  1002→            </div>
+  1003→
+  1004→            <DialogFooter className="flex-row gap-2">
+  1005→              <Button
+  1006→                onClick={() => {
+  1007→                  onOpenChange(false);
+  1008→                  setView("collections");
+  1009→                }}
+  1010→                className="flex-1 rounded-full bg-emerald text-ivory hover:bg-emerald-soft"
+  1011→              >
+  1012→                Retour aux collections
+  1013→              </Button>
+  1014→            </DialogFooter>
+  1015→          </div>
+  1016→        )}
+  1017→      </DialogContent>
+  1018→    </Dialog>
+  1019→  );
+  1020→}
+  1021→
+  1022→function ProgressBar({ step }: { step: number }) {
+  1023→  return (
+  1024→    <div className="flex items-center justify-center gap-2 py-2">
+  1025→      {[1, 2, 3].map((s, i) => (
+  1026→        <div key={s} className="flex items-center gap-2">
+  1027→          <div
+  1028→            className={`h-3 w-3 rounded-full transition-colors ${
+  1029→              s <= step ? "bg-gold" : "bg-gold/20"
+  1030→            }`}
+  1031→          />
+  1032→          {i < 2 && (
+  1033→            <div
+  1034→              className={`h-px w-10 transition-colors ${
+  1035→                s < step ? "bg-gold" : "bg-gold/20"
+  1036→              }`}
+  1037→            />
+  1038→          )}
+  1039→        </div>
+  1040→      ))}
+  1041→    </div>
+  1042→  );
+  1043→}
+  1044→
+  1045→function RecapCard({
+  1046→  produit,
+  1047→  qty,
+  1048→  surMesure,
+  1049→  selectedColor,
+  1050→  compact = false,
+  1051→}: {
+  1052→  produit: Produit;
+  1053→  qty: number;
+  1054→  surMesure: boolean;
+  1055→  selectedColor: string;
+  1056→  compact?: boolean;
+  1057→}) {
+  1058→  const photos = parsePhotos(produit.photos);
+  1059→  const cover = photos[0] || "/images/placeholder.jpg";
+  1060→  return (
+  1061→    <div className="flex gap-3 rounded-lg border border-gold/25 bg-card/40 p-3">
+  1062→      <div className="h-20 w-16 rounded-md overflow-hidden bg-muted shrink-0">
+  1063→        <img src={cover} alt={produit.nom} className="h-full w-full object-cover" />
+  1064→      </div>
+  1065→      <div className="flex-1 min-w-0">
+  1066→        {produit.categorie && (
+  1067→          <p className="text-[10px] uppercase tracking-[0.2em] text-gold-deep">
+  1068→            {produit.categorie.libelle}
+  1069→          </p>
+  1070→        )}
+  1071→        <p className="font-display text-base text-emerald-deep leading-tight truncate">
+  1072→          {produit.nom}
+  1073→        </p>
+  1074→        <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-xs text-muted-foreground">
+  1075→          <span>Quantité : {qty}</span>
+  1076→          {selectedColor && <span>Couleur : <span className="capitalize">{selectedColor}</span></span>}
+  1077→          <span>{surMesure ? "Sur-mesure" : "Standard"}</span>
+  1078→        </div>
+  1079→        {!compact && (
+  1080→          <p className="font-display text-base text-gold-deep mt-1">
+  1081→            {formatMAD(produit.prix * qty)}
+  1082→          </p>
+  1083→        )}
+  1084→      </div>
+  1085→    </div>
+  1086→  );
+  1087→}
+  1088→
+  1089→function Field({
+  1090→  label,
+  1091→  required,
+  1092→  children,
+  1093→}: {
+  1094→  label: string;
+  1095→  required?: boolean;
+  1096→  children: React.ReactNode;
+  1097→}) {
+  1098→  return (
+  1099→    <div className="space-y-1.5">
+  1100→      <Label className="text-xs uppercase tracking-[0.18em] text-gold-deep">
+  1101→        {label}
+  1102→        {required && <span className="text-destructive ml-0.5">*</span>}
+  1103→      </Label>
+  1104→      {children}
+  1105→    </div>
+  1106→  );
+  1107→}
+  1108→
+  1109→/* =================== Helpers =================== */
+  1110→
+  1111→function parsePhotos(photos: string | null | undefined): string[] {
+  1112→  if (!photos) return [];
+  1113→  return photos
+  1114→    .split(",")
+  1115→    .map((s) => s.trim())
+  1116→    .filter(Boolean);
+  1117→}
+  1118→
+  1119→function parseCouleurs(couleurs: string | null | undefined): string[] {
+  1120→  if (!couleurs) return [];
+  1121→  return couleurs
+  1122→    .split(",")
+  1123→    .map((s) => s.trim())
+  1124→    .filter(Boolean);
+  1125→}
+  1126→
+  1127→/* =================== Skeleton =================== */
+  1128→
+  1129→function DetailSkeleton() {
+  1130→  return (
+  1131→    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12 animate-pulse">
+  1132→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+  1133→        <div>
+  1134→          <div className="aspect-[3/4] rounded-lg bg-muted" />
+  1135→          <div className="grid grid-cols-5 gap-2 mt-4">
+  1136→            {Array.from({ length: 5 }).map((_, i) => (
+  1137→              <div key={i} className="aspect-square rounded-md bg-muted" />
+  1138→            ))}
+  1139→          </div>
+  1140→        </div>
+  1141→        <div className="space-y-4">
+  1142→          <div className="h-4 w-1/4 bg-muted rounded" />
+  1143→          <div className="h-12 w-3/4 bg-muted rounded" />
+  1144→          <div className="h-8 w-1/3 bg-muted rounded" />
+  1145→          <div className="h-px w-full bg-muted my-4" />
+  1146→          <div className="space-y-2">
+  1147→            <div className="h-3 w-full bg-muted rounded" />
+  1148→            <div className="h-3 w-5/6 bg-muted rounded" />
+  1149→            <div className="h-3 w-4/6 bg-muted rounded" />
+  1150→          </div>
+  1151→          <div className="h-10 w-full bg-muted rounded-full" />
+  1152→          <div className="h-10 w-full bg-muted rounded-full" />
+  1153→        </div>
+  1154→      </div>
+  1155→    </div>
+  1156→  );
+  1157→}
+  1158→

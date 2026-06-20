@@ -249,25 +249,38 @@ async function main() {
     { cle: "histoire_accroche", valeur: "Trois générations de mains qui brodent l'âme du Maroc." },
     { cle: "hero_accroche", valeur: "L'art de la couture marocaine, façonné pour vous." },
     { cle: "atelier_texte", valeur: "Dans notre atelier de Fès, douze artisans perpétuent chaque jour des gestes vieux de plusieurs siècles. Le point de Fès, la sfifa, l'aakad, le rabat — autant de techniques que nous préservons et transmettons aux jeunes générations. La broderie main reste notre signature : un caftan peut demander jusqu'à 200 heures de travail." },
-    { cle: "contact_adresse", valeur: "12 Derb Al Kebira, Médina, Fès, Maroc" },
-    { cle: "contact_telephone", valeur: "+212 5 35 63 42 18" },
-    { cle: "contact_whatsapp", valeur: "+212 6 61 23 45 67" },
-    { cle: "contact_email", valeur: "contact@nadira-couture.ma" },
-    { cle: "contact_horaires", valeur: "Lun–Sam : 9h30–19h00 · Dimanche sur rendez-vous" },
+    { cle: "contact_adresse", valeur: "Quartier Salam, Agadir" },
+    { cle: "contact_maps", valeur: "https://maps.apple/p/osTsur6u9BnDAr" },
+    { cle: "contact_email", valeur: "couture.nadira2026@gmail.com" },
+    { cle: "contact_horaires", valeur: "Tous les jours, toute l'année · 10h00–23h00" },
     { cle: "citation_1", valeur: "« Le fil d'or ne ment pas : il garde la mémoire des mains qui l'ont tiré. »" },
     { cle: "citation_2", valeur: "« Un caftan n'est jamais terminé. Il s'endort et se réveille avec celle qui le porte. »" },
-    { cle: "reseaux_instagram", valeur: "https://instagram.com/nadira.couture" },
-    { cle: "reseaux_facebook", valeur: "https://facebook.com/nadira.couture" },
-    { cle: "reseaux_pinterest", valeur: "https://pinterest.com/nadiracouture" },
+    { cle: "reseaux_instagram", valeur: "https://www.instagram.com/couture_nadira" },
   ];
   for (const c of contenus) {
     await db.contenu.upsert({
       where: { cle: c.cle },
-      update: {},
+      update: { valeur: c.valeur },
       create: c,
     });
   }
   console.log("✓ Contenu éditorial créé");
+
+  // ===== Galerie photos (seed) =====
+  const galeriePhotos = [
+    { url: "/images/atelier-heritage.jpg", legende: "Notre atelier", categorie: "atelier" },
+    { url: "/images/artisan-1.jpg", legende: "Broderie main", categorie: "coulisses" },
+    { url: "/images/artisan-2.jpg", legende: "Coupe du velours", categorie: "coulisses" },
+    { url: "/images/artisan-3.jpg", legende: "Sfifa dorée", categorie: "coulisses" },
+    { url: "/images/hero-atelier.jpg", legende: "L'art de la broderie", categorie: "atelier" },
+  ];
+  for (const g of galeriePhotos) {
+    const existing = await db.galerie.findFirst({ where: { url: g.url } });
+    if (!existing) {
+      await db.galerie.create({ data: g });
+    }
+  }
+  console.log("✓ Galerie créée");
 
   // ===== Avis clients =====
   const avis = [
