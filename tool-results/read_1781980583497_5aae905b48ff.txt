@@ -1,0 +1,2002 @@
+     1→"use client";
+     2→
+     3→/**
+     4→ * NADIRA Couture — Back-office (Espace Administrateur)
+     5→ * Light, efficient Shopify/Net-a-Porter style admin on ivory-warm background
+     6→ * with emerald + gold accents. NOT the velvet dark theme (that's the public site).
+     7→ */
+     8→
+     9→import { useCallback, useEffect, useState } from "react";
+    10→import { useStore, type AdminSection } from "@/lib/store";
+    11→import { api, formatMAD, formatDate, formatDateTime } from "@/lib/api";
+    12→import type {
+    13→  Produit,
+    14→  Categorie,
+    15→  Commande,
+    16→  Client,
+    17→  RendezVous,
+    18→  Avis,
+    19→  Artisan,
+    20→  Contenu,
+    21→  Mesure,
+    22→  Galerie,
+    23→} from "@/lib/types";
+    24→import { STATUT_LABELS, STATUT_COLORS } from "@/lib/types";
+    25→import {
+    26→  NadiraWordmark,
+    27→  NadiraMedallion,
+    28→} from "@/components/nadira/brand";
+    29→
+    30→// shadcn/ui
+    31→import { Button } from "@/components/ui/button";
+    32→import { Card } from "@/components/ui/card";
+    33→import { Input } from "@/components/ui/input";
+    34→import { Textarea } from "@/components/ui/textarea";
+    35→import { Label } from "@/components/ui/label";
+    36→import { Badge } from "@/components/ui/badge";
+    37→import {
+    38→  Select,
+    39→  SelectContent,
+    40→  SelectItem,
+    41→  SelectTrigger,
+    42→  SelectValue,
+    43→} from "@/components/ui/select";
+    44→import {
+    45→  Dialog,
+    46→  DialogContent,
+    47→  DialogDescription,
+    48→  DialogFooter,
+    49→  DialogHeader,
+    50→  DialogTitle,
+    51→} from "@/components/ui/dialog";
+    52→import {
+    53→  Sheet,
+    54→  SheetContent,
+    55→  SheetTrigger,
+    56→} from "@/components/ui/sheet";
+    57→import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+    58→import {
+    59→  Table,
+    60→  TableBody,
+    61→  TableCell,
+    62→  TableHead,
+    63→  TableHeader,
+    64→  TableRow,
+    65→} from "@/components/ui/table";
+    66→import { Switch } from "@/components/ui/switch";
+    67→import { Separator } from "@/components/ui/separator";
+    68→import { Skeleton } from "@/components/ui/skeleton";
+    69→import {
+    70→  AlertDialog,
+    71→  AlertDialogAction,
+    72→  AlertDialogCancel,
+    73→  AlertDialogContent,
+    74→  AlertDialogDescription,
+    75→  AlertDialogFooter,
+    76→  AlertDialogHeader,
+    77→  AlertDialogTitle,
+    78→  AlertDialogTrigger,
+    79→} from "@/components/ui/alert-dialog";
+    80→
+    81→// lucide
+    82→import {
+    83→  LayoutDashboard,
+    84→  Package,
+    85→  ShoppingCart,
+    86→  Calendar,
+    87→  Ruler,
+    88→  Star,
+    89→  FileText,
+    90→  Users,
+    91→  Images,
+    92→  Upload,
+    93→  LogOut,
+    94→  Plus,
+    95→  Edit,
+    96→  Trash2,
+    97→  Check,
+    98→  X,
+    99→  Search,
+   100→  Eye,
+   101→  Phone,
+   102→  Clock,
+   103→  AlertCircle,
+   104→  Menu,
+   105→  Save,
+   106→  Lock,
+   107→} from "lucide-react";
+   108→
+   109→// recharts
+   110→import {
+   111→  BarChart,
+   112→  Bar,
+   113→  XAxis,
+   114→  YAxis,
+   115→  Tooltip,
+   116→  ResponsiveContainer,
+   117→  CartesianGrid,
+   118→} from "recharts";
+   119→
+   120→// sonner
+   121→import { toast } from "sonner";
+   122→
+   123→/* ============================================================
+   124→   Helpers
+   125→============================================================ */
+   126→
+   127→const TOKEN_KEY = "nadira-admin-token";
+   128→const NAME_KEY = "nadira-admin-nom";
+   129→
+   130→function getToken(): string | null {
+   131→  if (typeof window === "undefined") return null;
+   132→  return localStorage.getItem(TOKEN_KEY);
+   133→}
+   134→
+   135→function getAdminName(): string {
+   136→  if (typeof window === "undefined") return "Administrateur";
+   137→  return localStorage.getItem(NAME_KEY) || "Administrateur";
+   138→}
+   139→
+   140→async function adminApi<T = unknown>(
+   141→  path: string,
+   142→  init?: RequestInit
+   143→): Promise<T> {
+   144→  const token = getToken();
+   145→  const res = await fetch(path, {
+   146→    ...init,
+   147→    headers: {
+   148→      "Content-Type": "application/json",
+   149→      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+   150→      ...(init?.headers || {}),
+   151→    },
+   152→  });
+   153→  if (!res.ok) {
+   154→    let msg = `Erreur ${res.status}`;
+   155→    try {
+   156→      const data = await res.json();
+   157→      msg = data.error || msg;
+   158→    } catch {
+   159→      try {
+   160→        msg = (await res.text()) || msg;
+   161→      } catch {
+   162→        /* noop */
+   163→      }
+   164→    }
+   165→    throw new Error(msg);
+   166→  }
+   167→  return res.json() as Promise<T>;
+   168→}
+   169→
+   170→function slugify(s: string): string {
+   171→  return s
+   172→    .toLowerCase()
+   173→    .normalize("NFD")
+   174→    .replace(/[\u0300-\u036f]/g, "")
+   175→    .replace(/[^a-z0-9]+/g, "-")
+   176→    .replace(/^-|-$/g, "");
+   177→}
+   178→
+   179→const NAV_ITEMS: {
+   180→  key: AdminSection;
+   181→  label: string;
+   182→  icon: typeof LayoutDashboard;
+   183→}[] = [
+   184→  { key: "dashboard", label: "Tableau de bord", icon: LayoutDashboard },
+   185→  { key: "produits", label: "Produits", icon: Package },
+   186→  { key: "commandes", label: "Commandes", icon: ShoppingCart },
+   187→  { key: "rendezvous", label: "Rendez-vous", icon: Calendar },
+   188→  { key: "mesures", label: "Mesures", icon: Ruler },
+   189→  { key: "avis", label: "Avis", icon: Star },
+   190→  { key: "galerie", label: "Galerie", icon: Images },
+   191→  { key: "artisans", label: "Artisans", icon: Users },
+   192→  { key: "contenu", label: "Contenu", icon: FileText },
+   193→];
+   194→
+   195→function StatutBadge({ statut }: { statut: string }) {
+   196→  return (
+   197→    <span
+   198→      className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border whitespace-nowrap ${
+   199→        STATUT_COLORS[statut] ||
+   200→        "bg-muted text-muted-foreground border-border"
+   201→      }`}
+   202→    >
+   203→      {STATUT_LABELS[statut] || statut}
+   204→    </span>
+   205→  );
+   206→}
+   207→
+   208→function ProduitThumb({ photos, alt }: { photos: string; alt: string }) {
+   209→  const first = photos?.split(",")[0]?.trim();
+   210→  return (
+   211→    <div className="w-10 h-10 rounded-md overflow-hidden bg-muted border border-border shrink-0">
+   212→      {first ? (
+   213→        <img
+   214→          src={first}
+   215→          alt={alt}
+   216→          className="w-full h-full object-cover"
+   217→          onError={(e) => {
+   218→            (e.currentTarget as HTMLImageElement).style.display = "none";
+   219→          }}
+   220→        />
+   221→      ) : (
+   222→        <Package className="w-4 h-4 m-auto mt-3 text-muted-foreground" />
+   223→      )}
+   224→    </div>
+   225→  );
+   226→}
+   227→
+   228→/* ============================================================
+   229→   Main export
+   230→============================================================ */
+   231→
+   232→export function AdminView() {
+   233→  const { adminAuthed, setAdminAuthed } = useStore();
+   234→  // Lazy initial state: if no token in localStorage, skip boot entirely
+   235→  const [booted, setBooted] = useState(() => {
+   236→    if (typeof window === "undefined") return false;
+   237→    return !localStorage.getItem(TOKEN_KEY);
+   238→  });
+   239→
+   240→  // Verify the existing token (if any) with the backend
+   241→  useEffect(() => {
+   242→    const token = getToken();
+   243→    if (!token) return;
+   244→    adminApi<{ admin: { id: number; nom: string } }>("/api/admin/me")
+   245→      .then(() => setAdminAuthed(true))
+   246→      .catch(() => {
+   247→        localStorage.removeItem(TOKEN_KEY);
+   248→        localStorage.removeItem(NAME_KEY);
+   249→        setAdminAuthed(false);
+   250→      })
+   251→      .finally(() => setBooted(true));
+   252→  }, [setAdminAuthed]);
+   253→
+   254→  if (!booted) {
+   255→    return (
+   256→      <div className="velvet-deep min-h-screen flex items-center justify-center">
+   257→        <NadiraMedallion className="w-16 h-16 opacity-60" />
+   258→      </div>
+   259→    );
+   260→  }
+   261→
+   262→  if (!adminAuthed) return <AdminLogin />;
+   263→  return <AdminDashboard />;
+   264→}
+   265→
+   266→/* ============================================================
+   267→   Login screen
+   268→============================================================ */
+   269→
+   270→function AdminLogin() {
+   271→  const { setAdminAuthed, setView } = useStore();
+   272→  const [email, setEmail] = useState("");
+   273→  const [password, setPassword] = useState("");
+   274→  const [twoFA, setTwoFA] = useState(false);
+   275→  const [error, setError] = useState<string | null>(null);
+   276→  const [loading, setLoading] = useState(false);
+   277→
+   278→  async function handleSubmit(e: React.FormEvent) {
+   279→    e.preventDefault();
+   280→    setError(null);
+   281→    setLoading(true);
+   282→    try {
+   283→      const data = await api<{
+   284→        token: string;
+   285→        admin: { id: number; nom: string; email: string; role: string };
+   286→      }>("/api/admin/login", {
+   287→        method: "POST",
+   288→        body: JSON.stringify({ email, password }),
+   289→      });
+   290→      localStorage.setItem(TOKEN_KEY, data.token);
+   291→      localStorage.setItem(NAME_KEY, data.admin.nom);
+   292→      setAdminAuthed(true);
+   293→      toast.success(`Bienvenue, ${data.admin.nom}`);
+   294→    } catch (err) {
+   295→      setError(err instanceof Error ? err.message : "Échec de connexion");
+   296→    } finally {
+   297→      setLoading(false);
+   298→    }
+   299→  }
+   300→
+   301→  return (
+   302→    <div className="velvet-deep min-h-screen flex items-center justify-center p-4">
+   303→      <div className="w-full max-w-md">
+   304→        <button
+   305→          onClick={() => setView("accueil")}
+   306→          className="text-ivory/60 hover:text-gold-light text-xs tracking-[0.2em] uppercase mb-6 mx-auto block transition-colors"
+   307→        >
+   308→          ← Retour au site
+   309→        </button>
+   310→
+   311→        <div className="bg-card rounded-2xl shadow-2xl border border-gold/30 p-8">
+   312→          <div className="flex justify-center mb-5">
+   313→            <NadiraMedallion className="w-20 h-20" />
+   314→          </div>
+   315→          <h1 className="font-display text-2xl text-center text-emerald-deep mb-1">
+   316→            Espace Administrateur
+   317→          </h1>
+   318→          <p className="text-center text-[10px] text-muted-foreground tracking-[0.34em] uppercase mb-6">
+   319→            Maison NADIRA Couture
+   320→          </p>
+   321→
+   322→          <form onSubmit={handleSubmit} className="space-y-4">
+   323→            <div className="space-y-1.5">
+   324→              <Label htmlFor="email" className="text-xs uppercase tracking-wider">
+   325→                Email
+   326→              </Label>
+   327→              <Input
+   328→                id="email"
+   329→                type="email"
+   330→                value={email}
+   331→                onChange={(e) => setEmail(e.target.value)}
+   332→                required
+   333→                placeholder="admin@nadira-couture.ma"
+   334→                autoComplete="username"
+   335→              />
+   336→            </div>
+   337→            <div className="space-y-1.5">
+   338→              <Label
+   339→                htmlFor="password"
+   340→                className="text-xs uppercase tracking-wider"
+   341→              >
+   342→                Mot de passe
+   343→              </Label>
+   344→              <Input
+   345→                id="password"
+   346→                type="password"
+   347→                value={password}
+   348→                onChange={(e) => setPassword(e.target.value)}
+   349→                required
+   350→                autoComplete="current-password"
+   351→              />
+   352→            </div>
+   353→            <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+   354→              <input
+   355→                type="checkbox"
+   356→                checked={twoFA}
+   357→                onChange={(e) => setTwoFA(e.target.checked)}
+   358→                className="rounded border-border w-4 h-4 accent-emerald"
+   359→              />
+   360→              Activer la double authentification
+   361→            </label>
+   362→
+   363→            {error && (
+   364→              <div className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-3 flex items-start gap-2">
+   365→                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+   366→                <span>{error}</span>
+   367→              </div>
+   368→            )}
+   369→
+   370→            <Button
+   371→              type="submit"
+   372→              disabled={loading}
+   373→              className="w-full bg-emerald hover:bg-emerald-deep text-ivory h-10"
+   374→            >
+   375→              {loading ? "Connexion..." : "Se connecter"}
+   376→            </Button>
+   377→          </form>
+   378→
+   379→          <p className="text-center text-[10px] text-muted-foreground mt-6 tracking-[0.2em] uppercase">
+   380→            Accès réservé à la maison NADIRA
+   381→          </p>
+   382→        </div>
+   383→      </div>
+   384→    </div>
+   385→  );
+   386→}
+   387→
+   388→/* ============================================================
+   389→   Dashboard shell (top bar + sidebar + main)
+   390→============================================================ */
+   391→
+   392→function AdminDashboard() {
+   393→  const { setAdminAuthed, adminSection, setView } = useStore();
+   394→  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+   395→  const adminName = getAdminName();
+   396→
+   397→  function logout() {
+   398→    localStorage.removeItem(TOKEN_KEY);
+   399→    localStorage.removeItem(NAME_KEY);
+   400→    setAdminAuthed(false);
+   401→    toast.success("Déconnecté");
+   402→  }
+   403→
+   404→  return (
+   405→    <div className="min-h-screen flex flex-col bg-ivory-warm">
+   406→      {/* Top bar */}
+   407→      <header className="sticky top-0 z-30 bg-card border-b border-border">
+   408→        <div className="flex items-center justify-between px-4 lg:px-6 h-14">
+   409→          <div className="flex items-center gap-2">
+   410→            <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+   411→              <SheetTrigger asChild>
+   412→                <Button variant="ghost" size="icon" className="lg:hidden">
+   413→                  <Menu className="w-5 h-5" />
+   414→                </Button>
+   415→              </SheetTrigger>
+   416→              <SheetContent side="left" className="w-64 p-0">
+   417→                <Sidebar onNavigate={() => setMobileNavOpen(false)} />
+   418→              </SheetContent>
+   419→            </Sheet>
+   420→            <NadiraWordmark className="scale-90 origin-left" />
+   421→          </div>
+   422→
+   423→          <div className="flex items-center gap-2">
+   424→            <span className="hidden md:inline-flex items-center gap-1.5 text-[11px] text-emerald-deep bg-emerald/5 border border-emerald/20 rounded-full px-2.5 py-1">
+   425→              <Lock className="w-3 h-3" /> Session sécurisée
+   426→            </span>
+   427→            <Button
+   428→              variant="ghost"
+   429→              size="sm"
+   430→              onClick={() => setView("accueil")}
+   431→              className="text-emerald-deep"
+   432→            >
+   433→              Voir le site
+   434→            </Button>
+   435→            <Separator orientation="vertical" className="h-6 hidden sm:block" />
+   436→            <span className="hidden sm:inline text-sm text-muted-foreground">
+   437→              {adminName}
+   438→            </span>
+   439→            <Button
+   440→              variant="ghost"
+   441→              size="sm"
+   442→              onClick={logout}
+   443→              className="text-destructive hover:text-destructive"
+   444→            >
+   445→              <LogOut className="w-4 h-4 mr-1" /> Déconnexion
+   446→            </Button>
+   447→          </div>
+   448→        </div>
+   449→      </header>
+   450→
+   451→      <div className="flex-1 flex">
+   452→        {/* Sidebar — desktop */}
+   453→        <aside className="hidden lg:block w-64 bg-card border-r border-border shrink-0">
+   454→          <Sidebar />
+   455→        </aside>
+   456→
+   457→        {/* Main content */}
+   458→        <main className="flex-1 p-4 lg:p-6 max-h-screen overflow-y-auto nadira-scroll">
+   459→          {adminSection === "dashboard" && <DashboardSection />}
+   460→          {adminSection === "produits" && <ProduitsSection />}
+   461→          {adminSection === "commandes" && <CommandesSection />}
+   462→          {adminSection === "rendezvous" && <RendezvousSection />}
+   463→          {adminSection === "mesures" && <MesuresSection />}
+   464→          {adminSection === "avis" && <AvisSection />}
+   465→          {adminSection === "galerie" && <GalerieSection />}
+   466→          {adminSection === "artisans" && <ArtisansSection />}
+   467→          {adminSection === "contenu" && <ContenuSection />}
+   468→        </main>
+   469→      </div>
+   470→    </div>
+   471→  );
+   472→}
+   473→
+   474→function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+   475→  const { adminSection, setAdminSection } = useStore();
+   476→  return (
+   477→    <nav className="p-4 space-y-1">
+   478→      <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground px-3 py-2">
+   479→        Navigation
+   480→      </div>
+   481→      {NAV_ITEMS.map((item) => {
+   482→        const Icon = item.icon;
+   483→        const active = adminSection === item.key;
+   484→        return (
+   485→          <button
+   486→            key={item.key}
+   487→            onClick={() => {
+   488→              setAdminSection(item.key);
+   489→              onNavigate?.();
+   490→            }}
+   491→            className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+   492→              active
+   493→                ? "bg-emerald text-ivory shadow-sm"
+   494→                : "text-foreground hover:bg-muted"
+   495→            }`}
+   496→          >
+   497→            <Icon className="w-4 h-4 shrink-0" />
+   498→            {item.label}
+   499→          </button>
+   500→        );
+   501→      })}
+   502→      <div className="pt-6 px-3">
+   503→        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">
+   504→          Maison NADIRA
+   505→        </div>
+   506→        <div className="h-px gold-line opacity-60" />
+   507→        <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
+   508→          Atelier de Fès · Maroc
+   509→          <br />
+   510→          Couture haute joaillerie
+   511→        </p>
+   512→      </div>
+   513→    </nav>
+   514→  );
+   515→}
+   516→
+   517→/* ============================================================
+   518→   1. Dashboard section
+   519→============================================================ */
+   520→
+   521→type Stats = {
+   522→  totalCommandes: number;
+   523→  commandesEnAttente: number;
+   524→  commandesEnConfection: number;
+   525→  commandesLivrees: number;
+   526→  totalClients: number;
+   527→  totalProduits: number;
+   528→  rdvAVenir: number;
+   529→  topProduits: {
+   530→    produit: {
+   531→      id: number;
+   532→      nom: string;
+   533→      slug: string;
+   534→      photos: string;
+   535→      prix: number;
+   536→    };
+   537→    count: number;
+   538→  }[];
+   539→  commandesParMois: { mois: string; count: number }[];
+   540→  commandesRecentes: Commande[];
+   541→};
+   542→
+   543→function DashboardSection() {
+   544→  const [stats, setStats] = useState<Stats | null>(null);
+   545→  const [loading, setLoading] = useState(true);
+   546→  const [selectedCmd, setSelectedCmd] = useState<Commande | null>(null);
+   547→  const [openCmd, setOpenCmd] = useState(false);
+   548→  const [openManual, setOpenManual] = useState(false);
+   549→
+   550→  const load = useCallback(() => {
+   551→    setLoading(true);
+   552→    adminApi<Stats>("/api/stats")
+   553→      .then(setStats)
+   554→      .catch((e) => toast.error(e.message))
+   555→      .finally(() => setLoading(false));
+   556→  }, []);
+   557→
+   558→  useEffect(() => {
+   559→    // eslint-disable-next-line react-hooks/set-state-in-effect
+   560→    load();
+   561→  }, [load]);
+   562→
+   563→  if (loading || !stats) return <DashboardSkeleton />;
+   564→
+   565→  return (
+   566→    <div className="space-y-6">
+   567→      <div className="flex items-center justify-between flex-wrap gap-3">
+   568→        <div>
+   569→          <h1 className="font-display text-2xl text-emerald-deep">
+   570→            Tableau de bord
+   571→          </h1>
+   572→          <p className="text-sm text-muted-foreground">
+   573→            Vue d&apos;ensemble de l&apos;activité
+   574→          </p>
+   575→        </div>
+   576→        <Button
+   577→          className="bg-emerald hover:bg-emerald-deep text-ivory"
+   578→          onClick={() => setOpenManual(true)}
+   579→        >
+   580→          <Plus className="w-4 h-4 mr-1" /> Nouvelle commande
+   581→        </Button>
+   582→      </div>
+   583→
+   584→      {/* KPI cards */}
+   585→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   586→        <KpiCard
+   587→          icon={ShoppingCart}
+   588→          label="Commandes totales"
+   589→          value={stats.totalCommandes}
+   590→          accent="emerald"
+   591→        />
+   592→        <KpiCard
+   593→          icon={Users}
+   594→          label="Clients"
+   595→          value={stats.totalClients}
+   596→          accent="gold"
+   597→        />
+   598→        <KpiCard
+   599→          icon={Clock}
+   600→          label="En attente"
+   601→          value={stats.commandesEnAttente}
+   602→          badge
+   603→        />
+   604→        <KpiCard
+   605→          icon={Calendar}
+   606→          label="RDV à venir"
+   607→          value={stats.rdvAVenir}
+   608→          accent="emerald"
+   609→        />
+   610→      </div>
+   611→
+   612→      {/* Secondary KPI row */}
+   613→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+   614→        <MiniStat label="En confection" value={stats.commandesEnConfection} />
+   615→        <MiniStat label="Livrées" value={stats.commandesLivrees} />
+   616→        <MiniStat label="Produits" value={stats.totalProduits} />
+   617→        <MiniStat label="RDV à venir" value={stats.rdvAVenir} />
+   618→      </div>
+   619→
+   620→      {/* Charts */}
+   621→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   622→        <Card className="lg:col-span-2 p-5">
+   623→          <h3 className="font-display text-lg text-emerald-deep mb-1">
+   624→            Commandes · 6 derniers mois
+   625→          </h3>
+   626→          <p className="text-xs text-muted-foreground mb-4">
+   627→            Évolution mensuelle des commandes
+   628→          </p>
+   629→          <ResponsiveContainer width="100%" height={260}>
+   630→            <BarChart data={stats.commandesParMois}>
+   631→              <CartesianGrid strokeDasharray="3 3" stroke="#E2D8C4" />
+   632→              <XAxis
+   633→                dataKey="mois"
+   634→                tick={{ fontSize: 11, fill: "#6B5F4D" }}
+   635→              />
+   636→              <YAxis
+   637→                tick={{ fontSize: 11, fill: "#6B5F4D" }}
+   638→                allowDecimals={false}
+   639→              />
+   640→              <Tooltip
+   641→                contentStyle={{
+   642→                  background: "#FBF7EE",
+   643→                  border: "1px solid #E2D8C4",
+   644→                  borderRadius: 8,
+   645→                  fontSize: 12,
+   646→                }}
+   647→              />
+   648→              <Bar
+   649→                dataKey="count"
+   650→                name="Commandes"
+   651→                fill="#C9A24B"
+   652→                radius={[6, 6, 0, 0]}
+   653→              />
+   654→            </BarChart>
+   655→          </ResponsiveContainer>
+   656→        </Card>
+   657→
+   658→        <Card className="p-5">
+   659→          <h3 className="font-display text-lg text-emerald-deep mb-1">
+   660→            Top produits
+   661→          </h3>
+   662→          <p className="text-xs text-muted-foreground mb-4">Meilleures ventes</p>
+   663→          {stats.topProduits.length === 0 ? (
+   664→            <p className="text-sm text-muted-foreground text-center py-12">
+   665→              Aucune vente enregistrée
+   666→            </p>
+   667→          ) : (
+   668→            <ul className="space-y-3">
+   669→              {stats.topProduits.map((tp, i) => (
+   670→                <li key={tp.produit.id} className="flex items-center gap-3">
+   671→                  <span className="font-display text-gold-deep text-lg w-6 text-center">
+   672→                    {i + 1}
+   673→                  </span>
+   674→                  <ProduitThumb
+   675→                    photos={tp.produit.photos}
+   676→                    alt={tp.produit.nom}
+   677→                  />
+   678→                  <div className="flex-1 min-w-0">
+   679→                    <p className="text-sm font-medium truncate">
+   680→                      {tp.produit.nom}
+   681→                    </p>
+   682→                    <p className="text-xs text-muted-foreground">
+   683→                      {tp.count} vendu{tp.count > 1 ? "s" : ""}
+   684→                    </p>
+   685→                  </div>
+   686→                  <span className="text-xs text-muted-foreground">
+   687→                    {formatMAD(tp.produit.prix)}
+   688→                  </span>
+   689→                </li>
+   690→              ))}
+   691→            </ul>
+   692→          )}
+   693→        </Card>
+   694→      </div>
+   695→
+   696→      {/* Recent orders */}
+   697→      <Card className="p-5">
+   698→        <div className="flex items-center justify-between mb-4">
+   699→          <div>
+   700→            <h3 className="font-display text-lg text-emerald-deep">
+   701→              Commandes récentes
+   702→            </h3>
+   703→            <p className="text-xs text-muted-foreground">5 dernières</p>
+   704→          </div>
+   705→        </div>
+   706→        <div className="overflow-x-auto">
+   707→          <Table>
+   708→            <TableHeader>
+   709→              <TableRow>
+   710→                <TableHead>Réf.</TableHead>
+   711→                <TableHead>Client</TableHead>
+   712→                <TableHead className="hidden md:table-cell">Date</TableHead>
+   713→                <TableHead>Statut</TableHead>
+   714→                <TableHead className="text-right">Montant</TableHead>
+   715→                <TableHead className="w-12"></TableHead>
+   716→              </TableRow>
+   717→            </TableHeader>
+   718→            <TableBody>
+   719→              {stats.commandesRecentes.length === 0 && (
+   720→                <TableRow>
+   721→                  <TableCell
+   722→                    colSpan={6}
+   723→                    className="text-center text-muted-foreground py-8"
+   724→                  >
+   725→                    Aucune commande
+   726→                  </TableCell>
+   727→                </TableRow>
+   728→              )}
+   729→              {stats.commandesRecentes.map((c) => (
+   730→                <TableRow key={c.id}>
+   731→                  <TableCell className="font-mono text-xs">
+   732→                    {c.reference}
+   733→                  </TableCell>
+   734→                  <TableCell className="text-sm">
+   735→                    {c.client
+   736→                      ? `${c.client.prenom} ${c.client.nom}`
+   737→                      : "—"}
+   738→                  </TableCell>
+   739→                  <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+   740→                    {formatDate(c.dateCommande)}
+   741→                  </TableCell>
+   742→                  <TableCell>
+   743→                    <StatutBadge statut={c.statut} />
+   744→                  </TableCell>
+   745→                  <TableCell className="text-right font-medium">
+   746→                    {formatMAD(c.montantTotal)}
+   747→                  </TableCell>
+   748→                  <TableCell>
+   749→                    <Button
+   750→                      variant="ghost"
+   751→                      size="sm"
+   752→                      onClick={() => {
+   753→                        setSelectedCmd(c);
+   754→                        setOpenCmd(true);
+   755→                      }}
+   756→                    >
+   757→                      <Eye className="w-4 h-4" />
+   758→                    </Button>
+   759→                  </TableCell>
+   760→                </TableRow>
+   761→              ))}
+   762→            </TableBody>
+   763→          </Table>
+   764→        </div>
+   765→      </Card>
+   766→
+   767→      {openCmd && selectedCmd && (
+   768→        <CommandeDetailDialog
+   769→          id={selectedCmd.id}
+   770→          open={openCmd}
+   771→          onOpenChange={setOpenCmd}
+   772→        />
+   773→      )}
+   774→
+   775→      <ManualOrderDialog
+   776→        open={openManual}
+   777→        onOpenChange={setOpenManual}
+   778→      />
+   779→    </div>
+   780→  );
+   781→}
+   782→
+   783→function KpiCard({
+   784→  icon: Icon,
+   785→  label,
+   786→  value,
+   787→  accent = "emerald",
+   788→  badge,
+   789→}: {
+   790→  icon: typeof LayoutDashboard;
+   791→  label: string;
+   792→  value: string | number;
+   793→  accent?: "emerald" | "gold";
+   794→  badge?: boolean;
+   795→}) {
+   796→  const accentBg =
+   797→    accent === "gold"
+   798→      ? "bg-gold/10 text-gold-deep"
+   799→      : "bg-emerald/10 text-emerald";
+   800→  return (
+   801→    <Card className="p-4 flex items-center gap-4">
+   802→      <div
+   803→        className={`w-11 h-11 rounded-lg flex items-center justify-center shrink-0 ${accentBg}`}
+   804→      >
+   805→        <Icon className="w-5 h-5" />
+   806→      </div>
+   807→      <div className="flex-1 min-w-0">
+   808→        <p className="text-[10px] text-muted-foreground uppercase tracking-[0.15em]">
+   809→          {label}
+   810→        </p>
+   811→        <p className="font-display text-2xl text-emerald-deep truncate flex items-center gap-2">
+   812→          {value}
+   813→          {badge && Number(value) > 0 && (
+   814→            <span className="inline-flex items-center justify-center min-w-5 h-5 px-1 text-[10px] bg-destructive text-white rounded-full">
+   815→              {value}
+   816→            </span>
+   817→          )}
+   818→        </p>
+   819→      </div>
+   820→    </Card>
+   821→  );
+   822→}
+   823→
+   824→function MiniStat({ label, value }: { label: string; value: string | number }) {
+   825→  return (
+   826→    <div className="flex items-center justify-between border-b border-border pb-2">
+   827→      <span className="text-muted-foreground text-xs uppercase tracking-wider">
+   828→        {label}
+   829→      </span>
+   830→      <span className="font-medium text-emerald-deep">{value}</span>
+   831→    </div>
+   832→  );
+   833→}
+   834→
+   835→function DashboardSkeleton() {
+   836→  return (
+   837→    <div className="space-y-6">
+   838→      <Skeleton className="h-10 w-64" />
+   839→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+   840→        {Array.from({ length: 4 }).map((_, i) => (
+   841→          <Skeleton key={i} className="h-24" />
+   842→        ))}
+   843→      </div>
+   844→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+   845→        <Skeleton className="lg:col-span-2 h-72" />
+   846→        <Skeleton className="h-72" />
+   847→      </div>
+   848→      <Skeleton className="h-64" />
+   849→    </div>
+   850→  );
+   851→}
+   852→
+   853→/* ============================================================
+   854→   2. Produits section
+   855→============================================================ */
+   856→
+   857→function ProduitsSection() {
+   858→  const [produits, setProduits] = useState<Produit[]>([]);
+   859→  const [categories, setCategories] = useState<Categorie[]>([]);
+   860→  const [loading, setLoading] = useState(true);
+   861→  const [search, setSearch] = useState("");
+   862→  const [editProduit, setEditProduit] = useState<Produit | null>(null);
+   863→  const [dialogOpen, setDialogOpen] = useState(false);
+   864→  const [deleteTarget, setDeleteTarget] = useState<Produit | null>(null);
+   865→
+   866→  const load = useCallback(() => {
+   867→    setLoading(true);
+   868→    Promise.all([
+   869→      adminApi<Produit[]>("/api/produits"),
+   870→      api<Categorie[]>("/api/categories"),
+   871→    ])
+   872→      .then(([p, c]) => {
+   873→        setProduits(p);
+   874→        setCategories(c);
+   875→      })
+   876→      .catch((e) => toast.error(e.message))
+   877→      .finally(() => setLoading(false));
+   878→  }, []);
+   879→
+   880→  useEffect(() => {
+   881→    // eslint-disable-next-line react-hooks/set-state-in-effect
+   882→    load();
+   883→  }, [load]);
+   884→
+   885→  const filtered = produits.filter(
+   886→    (p) =>
+   887→      !search ||
+   888→      p.nom.toLowerCase().includes(search.toLowerCase()) ||
+   889→      p.slug.includes(search.toLowerCase())
+   890→  );
+   891→
+   892→  async function handleDelete() {
+   893→    if (!deleteTarget) return;
+   894→    try {
+   895→      await adminApi(`/api/produits/${deleteTarget.slug}`, {
+   896→        method: "DELETE",
+   897→      });
+   898→      toast.success("Produit supprimé");
+   899→      setDeleteTarget(null);
+   900→      load();
+   901→    } catch (e) {
+   902→      toast.error(e instanceof Error ? e.message : "Erreur");
+   903→    }
+   904→  }
+   905→
+   906→  return (
+   907→    <div className="space-y-6">
+   908→      <div className="flex items-center justify-between flex-wrap gap-3">
+   909→        <div>
+   910→          <h1 className="font-display text-2xl text-emerald-deep">Produits</h1>
+   911→          <p className="text-sm text-muted-foreground">
+   912→            {produits.length} produit{produits.length > 1 ? "s" : ""} en
+   913→            catalogue
+   914→          </p>
+   915→        </div>
+   916→        <Button
+   917→          className="bg-emerald hover:bg-emerald-deep text-ivory"
+   918→          onClick={() => {
+   919→            setEditProduit(null);
+   920→            setDialogOpen(true);
+   921→          }}
+   922→        >
+   923→          <Plus className="w-4 h-4 mr-1" /> Ajouter un produit
+   924→        </Button>
+   925→      </div>
+   926→
+   927→      <Card className="p-4">
+   928→        <div className="relative mb-4">
+   929→          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+   930→          <Input
+   931→            placeholder="Rechercher un produit..."
+   932→            value={search}
+   933→            onChange={(e) => setSearch(e.target.value)}
+   934→            className="pl-9"
+   935→          />
+   936→        </div>
+   937→
+   938→        {loading ? (
+   939→          <div className="space-y-2">
+   940→            {Array.from({ length: 5 }).map((_, i) => (
+   941→              <Skeleton key={i} className="h-12 w-full" />
+   942→            ))}
+   943→          </div>
+   944→        ) : (
+   945→          <div className="overflow-x-auto">
+   946→            <Table>
+   947→              <TableHeader>
+   948→                <TableRow>
+   949→                  <TableHead className="w-12">Photo</TableHead>
+   950→                  <TableHead>Nom</TableHead>
+   951→                  <TableHead className="hidden md:table-cell">
+   952→                    Catégorie
+   953→                  </TableHead>
+   954→                  <TableHead className="text-right">Prix</TableHead>
+   955→                  <TableHead className="text-right">Stock</TableHead>
+   956→                  <TableHead>Vedette</TableHead>
+   957→                  <TableHead className="text-right">Actions</TableHead>
+   958→                </TableRow>
+   959→              </TableHeader>
+   960→              <TableBody>
+   961→                {filtered.length === 0 && (
+   962→                  <TableRow>
+   963→                    <TableCell
+   964→                      colSpan={7}
+   965→                      className="text-center text-muted-foreground py-8"
+   966→                    >
+   967→                      Aucun produit
+   968→                    </TableCell>
+   969→                  </TableRow>
+   970→                )}
+   971→                {filtered.map((p) => (
+   972→                  <TableRow key={p.id}>
+   973→                    <TableCell>
+   974→                      <ProduitThumb photos={p.photos} alt={p.nom} />
+   975→                    </TableCell>
+   976→                    <TableCell className="font-medium">{p.nom}</TableCell>
+   977→                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+   978→                      {p.categorie?.libelle || "—"}
+   979→                    </TableCell>
+   980→                    <TableCell className="text-right">
+   981→                      {formatMAD(p.prix)}
+   982→                    </TableCell>
+   983→                    <TableCell className="text-right">{p.stock}</TableCell>
+   984→                    <TableCell>
+   985→                      {p.vedette && (
+   986→                        <Badge className="bg-gold/15 text-gold-deep border-gold/30">
+   987→                          Vedette
+   988→                        </Badge>
+   989→                      )}
+   990→                    </TableCell>
+   991→                    <TableCell className="text-right">
+   992→                      <div className="flex justify-end gap-1">
+   993→                        <Button
+   994→                          variant="ghost"
+   995→                          size="sm"
+   996→                          onClick={() => {
+   997→                            setEditProduit(p);
+   998→                            setDialogOpen(true);
+   999→                          }}
+  1000→                        >
+  1001→                          <Edit className="w-4 h-4" />
+  1002→                        </Button>
+  1003→                        <Button
+  1004→                          variant="ghost"
+  1005→                          size="sm"
+  1006→                          className="text-destructive"
+  1007→                          onClick={() => setDeleteTarget(p)}
+  1008→                        >
+  1009→                          <Trash2 className="w-4 h-4" />
+  1010→                        </Button>
+  1011→                      </div>
+  1012→                    </TableCell>
+  1013→                  </TableRow>
+  1014→                ))}
+  1015→              </TableBody>
+  1016→            </Table>
+  1017→          </div>
+  1018→        )}
+  1019→      </Card>
+  1020→
+  1021→      <ProduitFormDialog
+  1022→        open={dialogOpen}
+  1023→        onOpenChange={setDialogOpen}
+  1024→        produit={editProduit}
+  1025→        categories={categories}
+  1026→        onSaved={load}
+  1027→      />
+  1028→
+  1029→      <AlertDialog
+  1030→        open={!!deleteTarget}
+  1031→        onOpenChange={(o) => !o && setDeleteTarget(null)}
+  1032→      >
+  1033→        <AlertDialogContent>
+  1034→          <AlertDialogHeader>
+  1035→            <AlertDialogTitle>Supprimer ce produit ?</AlertDialogTitle>
+  1036→            <AlertDialogDescription>
+  1037→              Cette action est irréversible. Le produit « {deleteTarget?.nom} »
+  1038→              sera définitivement supprimé du catalogue.
+  1039→            </AlertDialogDescription>
+  1040→          </AlertDialogHeader>
+  1041→          <AlertDialogFooter>
+  1042→            <AlertDialogCancel>Annuler</AlertDialogCancel>
+  1043→            <AlertDialogAction
+  1044→              onClick={handleDelete}
+  1045→              className="bg-destructive text-white hover:bg-destructive/90"
+  1046→            >
+  1047→              Supprimer
+  1048→            </AlertDialogAction>
+  1049→          </AlertDialogFooter>
+  1050→        </AlertDialogContent>
+  1051→      </AlertDialog>
+  1052→    </div>
+  1053→  );
+  1054→}
+  1055→
+  1056→function ProduitFormDialog({
+  1057→  open,
+  1058→  onOpenChange,
+  1059→  produit,
+  1060→  categories,
+  1061→  onSaved,
+  1062→}: {
+  1063→  open: boolean;
+  1064→  onOpenChange: (o: boolean) => void;
+  1065→  produit: Produit | null;
+  1066→  categories: Categorie[];
+  1067→  onSaved: () => void;
+  1068→}) {
+  1069→  const [form, setForm] = useState({
+  1070→    nom: "",
+  1071→    slug: "",
+  1072→    description: "",
+  1073→    idCategorie: "",
+  1074→    prix: "",
+  1075→    tissu: "",
+  1076→    couleurs: "",
+  1077→    delaiRealisation: "21",
+  1078→    occasion: "",
+  1079→    vedette: false,
+  1080→    stock: "1",
+  1081→    photos: "",
+  1082→    longueur: "",
+  1083→    largeur: "",
+  1084→    tourPoitrine: "",
+  1085→    tourTaille: "",
+  1086→    tourHanches: "",
+  1087→    longueurManche: "",
+  1088→    autreDimensions: "",
+  1089→    datePiece: "",
+  1090→  });
+  1091→  const [saving, setSaving] = useState(false);
+  1092→
+  1093→  useEffect(() => {
+  1094→    if (produit) {
+  1095→      setForm({
+  1096→        nom: produit.nom,
+  1097→        slug: produit.slug,
+  1098→        description: produit.description,
+  1099→        idCategorie: String(produit.idCategorie),
+  1100→        prix: String(produit.prix),
+  1101→        tissu: produit.tissu,
+  1102→        couleurs: produit.couleurs,
+  1103→        delaiRealisation: String(produit.delaiRealisation),
+  1104→        occasion: produit.occasion || "",
+  1105→        vedette: produit.vedette,
+  1106→        stock: String(produit.stock),
+  1107→        photos: produit.photos,
+  1108→        longueur: produit.longueur != null ? String(produit.longueur) : "",
+  1109→        largeur: produit.largeur != null ? String(produit.largeur) : "",
+  1110→        tourPoitrine:
+  1111→          produit.tourPoitrine != null ? String(produit.tourPoitrine) : "",
+  1112→        tourTaille:
+  1113→          produit.tourTaille != null ? String(produit.tourTaille) : "",
+  1114→        tourHanches:
+  1115→          produit.tourHanches != null ? String(produit.tourHanches) : "",
+  1116→        longueurManche:
+  1117→          produit.longueurManche != null ? String(produit.longueurManche) : "",
+  1118→        autreDimensions: produit.autreDimensions || "",
+  1119→        datePiece: produit.datePiece
+  1120→          ? String(produit.datePiece).slice(0, 10)
+  1121→          : "",
+  1122→      });
+  1123→    } else {
+  1124→      setForm({
+  1125→        nom: "",
+  1126→        slug: "",
+  1127→        description: "",
+  1128→        idCategorie: "",
+  1129→        prix: "",
+  1130→        tissu: "",
+  1131→        couleurs: "",
+  1132→        delaiRealisation: "21",
+  1133→        occasion: "",
+  1134→        vedette: false,
+  1135→        stock: "1",
+  1136→        photos: "",
+  1137→        longueur: "",
+  1138→        largeur: "",
+  1139→        tourPoitrine: "",
+  1140→        tourTaille: "",
+  1141→        tourHanches: "",
+  1142→        longueurManche: "",
+  1143→        autreDimensions: "",
+  1144→        datePiece: "",
+  1145→      });
+  1146→    }
+  1147→  }, [produit, open]);
+  1148→
+  1149→  async function save() {
+  1150→    if (
+  1151→      !form.nom ||
+  1152→      !form.slug ||
+  1153→      !form.description ||
+  1154→      !form.idCategorie ||
+  1155→      !form.prix ||
+  1156→      !form.tissu ||
+  1157→      !form.couleurs ||
+  1158→      !form.photos
+  1159→    ) {
+  1160→      toast.error("Tous les champs requis doivent être remplis");
+  1161→      return;
+  1162→    }
+  1163→    setSaving(true);
+  1164→    const numOrNullOrUndef = (v: string): number | null => {
+  1165→      if (v === "") return null;
+  1166→      const n = Number(v);
+  1167→      return Number.isFinite(n) ? n : null;
+  1168→    };
+  1169→    const body = {
+  1170→      nom: form.nom,
+  1171→      slug: form.slug,
+  1172→      description: form.description,
+  1173→      idCategorie: Number(form.idCategorie),
+  1174→      prix: Number(form.prix),
+  1175→      tissu: form.tissu,
+  1176→      couleurs: form.couleurs,
+  1177→      delaiRealisation: Number(form.delaiRealisation) || 21,
+  1178→      occasion: form.occasion || null,
+  1179→      vedette: form.vedette,
+  1180→      stock: Number(form.stock) || 0,
+  1181→      photos: form.photos,
+  1182→      longueur: numOrNullOrUndef(form.longueur),
+  1183→      largeur: numOrNullOrUndef(form.largeur),
+  1184→      tourPoitrine: numOrNullOrUndef(form.tourPoitrine),
+  1185→      tourTaille: numOrNullOrUndef(form.tourTaille),
+  1186→      tourHanches: numOrNullOrUndef(form.tourHanches),
+  1187→      longueurManche: numOrNullOrUndef(form.longueurManche),
+  1188→      autreDimensions: form.autreDimensions || null,
+  1189→      datePiece: form.datePiece
+  1190→        ? new Date(form.datePiece).toISOString()
+  1191→        : null,
+  1192→    };
+  1193→    try {
+  1194→      if (produit) {
+  1195→        await adminApi(`/api/produits/${produit.slug}`, {
+  1196→          method: "PUT",
+  1197→          body: JSON.stringify(body),
+  1198→        });
+  1199→        toast.success("Produit mis à jour");
+  1200→      } else {
+  1201→        await adminApi("/api/produits", {
+  1202→          method: "POST",
+  1203→          body: JSON.stringify(body),
+  1204→        });
+  1205→        toast.success("Produit créé");
+  1206→      }
+  1207→      onOpenChange(false);
+  1208→      onSaved();
+  1209→    } catch (e) {
+  1210→      toast.error(e instanceof Error ? e.message : "Erreur");
+  1211→    } finally {
+  1212→      setSaving(false);
+  1213→    }
+  1214→  }
+  1215→
+  1216→  return (
+  1217→    <Dialog open={open} onOpenChange={onOpenChange}>
+  1218→      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+  1219→        <DialogHeader>
+  1220→          <DialogTitle>
+  1221→            {produit ? "Modifier le produit" : "Nouveau produit"}
+  1222→          </DialogTitle>
+  1223→        </DialogHeader>
+  1224→        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  1225→          <div className="space-y-1.5 md:col-span-2">
+  1226→            <Label>Nom *</Label>
+  1227→            <Input
+  1228→              value={form.nom}
+  1229→              onChange={(e) =>
+  1230→                setForm({
+  1231→                  ...form,
+  1232→                  nom: e.target.value,
+  1233→                  slug: produit ? form.slug : slugify(e.target.value),
+  1234→                })
+  1235→              }
+  1236→            />
+  1237→          </div>
+  1238→          <div className="space-y-1.5">
+  1239→            <Label>Slug *</Label>
+  1240→            <Input
+  1241→              value={form.slug}
+  1242→              onChange={(e) => setForm({ ...form, slug: e.target.value })}
+  1243→            />
+  1244→          </div>
+  1245→          <div className="space-y-1.5">
+  1246→            <Label>Catégorie *</Label>
+  1247→            <Select
+  1248→              value={form.idCategorie}
+  1249→              onValueChange={(v) => setForm({ ...form, idCategorie: v })}
+  1250→            >
+  1251→              <SelectTrigger className="w-full">
+  1252→                <SelectValue placeholder="Choisir..." />
+  1253→              </SelectTrigger>
+  1254→              <SelectContent>
+  1255→                {categories.map((c) => (
+  1256→                  <SelectItem key={c.id} value={String(c.id)}>
+  1257→                    {c.libelle}
+  1258→                  </SelectItem>
+  1259→                ))}
+  1260→              </SelectContent>
+  1261→            </Select>
+  1262→          </div>
+  1263→          <div className="space-y-1.5 md:col-span-2">
+  1264→            <Label>Description *</Label>
+  1265→            <Textarea
+  1266→              value={form.description}
+  1267→              onChange={(e) =>
+  1268→                setForm({ ...form, description: e.target.value })
+  1269→              }
+  1270→              rows={3}
+  1271→            />
+  1272→          </div>
+  1273→          <div className="space-y-1.5">
+  1274→            <Label>Prix (MAD) *</Label>
+  1275→            <Input
+  1276→              type="number"
+  1277→              value={form.prix}
+  1278→              onChange={(e) => setForm({ ...form, prix: e.target.value })}
+  1279→            />
+  1280→          </div>
+  1281→          <div className="space-y-1.5">
+  1282→            <Label>Stock</Label>
+  1283→            <Input
+  1284→              type="number"
+  1285→              value={form.stock}
+  1286→              onChange={(e) => setForm({ ...form, stock: e.target.value })}
+  1287→            />
+  1288→          </div>
+  1289→          <div className="space-y-1.5">
+  1290→            <Label>Tissu *</Label>
+  1291→            <Input
+  1292→              value={form.tissu}
+  1293→              onChange={(e) => setForm({ ...form, tissu: e.target.value })}
+  1294→            />
+  1295→          </div>
+  1296→          <div className="space-y-1.5">
+  1297→            <Label>Couleurs *</Label>
+  1298→            <Input
+  1299→              value={form.couleurs}
+  1300→              onChange={(e) => setForm({ ...form, couleurs: e.target.value })}
+  1301→              placeholder="Émeraude, Or"
+  1302→            />
+  1303→          </div>
+  1304→          <div className="space-y-1.5">
+  1305→            <Label>Délai (jours)</Label>
+  1306→            <Input
+  1307→              type="number"
+  1308→              value={form.delaiRealisation}
+  1309→              onChange={(e) =>
+  1310→                setForm({ ...form, delaiRealisation: e.target.value })
+  1311→              }
+  1312→            />
+  1313→          </div>
+  1314→          <div className="space-y-1.5">
+  1315→            <Label>Occasion</Label>
+  1316→            <Input
+  1317→              value={form.occasion}
+  1318→              onChange={(e) =>
+  1319→                setForm({ ...form, occasion: e.target.value })
+  1320→              }
+  1321→              placeholder="Mariage, Cérémonie"
+  1322→            />
+  1323→          </div>
+  1324→          <div className="space-y-1.5 md:col-span-2">
+  1325→            <Label>Photos (URLs séparées par virgules) *</Label>
+  1326→            <Input
+  1327→              value={form.photos}
+  1328→              onChange={(e) => setForm({ ...form, photos: e.target.value })}
+  1329→              placeholder="/images/caftan-1.jpg,/images/caftan-2.jpg"
+  1330→            />
+  1331→          </div>
+  1332→          <div className="md:col-span-2 flex items-center gap-3">
+  1333→            <Switch
+  1334→              checked={form.vedette}
+  1335→              onCheckedChange={(v) => setForm({ ...form, vedette: v })}
+  1336→              id="vedette"
+  1337→            />
+  1338→            <Label htmlFor="vedette">
+  1339→              Mettre en vedette (affichage page d&apos;accueil)
+  1340→            </Label>
+  1341→          </div>
+  1342→
+  1343→          {/* Dimensions */}
+  1344→          <div className="md:col-span-2 mt-2">
+  1345→            <p className="text-xs uppercase tracking-[0.15em] text-emerald-deep font-medium mb-2">
+  1346→              Dimensions (cm)
+  1347→            </p>
+  1348→            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 bg-muted/30 p-3 rounded-md">
+  1349→              <div className="space-y-1">
+  1350→                <Label className="text-xs">Longueur</Label>
+  1351→                <Input
+  1352→                  type="number"
+  1353→                  value={form.longueur}
+  1354→                  onChange={(e) =>
+  1355→                    setForm({ ...form, longueur: e.target.value })
+  1356→                  }
+  1357→                  placeholder="0"
+  1358→                />
+  1359→              </div>
+  1360→              <div className="space-y-1">
+  1361→                <Label className="text-xs">Largeur</Label>
+  1362→                <Input
+  1363→                  type="number"
+  1364→                  value={form.largeur}
+  1365→                  onChange={(e) =>
+  1366→                    setForm({ ...form, largeur: e.target.value })
+  1367→                  }
+  1368→                  placeholder="0"
+  1369→                />
+  1370→              </div>
+  1371→              <div className="space-y-1">
+  1372→                <Label className="text-xs">Tour de poitrine</Label>
+  1373→                <Input
+  1374→                  type="number"
+  1375→                  value={form.tourPoitrine}
+  1376→                  onChange={(e) =>
+  1377→                    setForm({ ...form, tourPoitrine: e.target.value })
+  1378→                  }
+  1379→                  placeholder="0"
+  1380→                />
+  1381→              </div>
+  1382→              <div className="space-y-1">
+  1383→                <Label className="text-xs">Tour de taille</Label>
+  1384→                <Input
+  1385→                  type="number"
+  1386→                  value={form.tourTaille}
+  1387→                  onChange={(e) =>
+  1388→                    setForm({ ...form, tourTaille: e.target.value })
+  1389→                  }
+  1390→                  placeholder="0"
+  1391→                />
+  1392→              </div>
+  1393→              <div className="space-y-1">
+  1394→                <Label className="text-xs">Tour de hanches</Label>
+  1395→                <Input
+  1396→                  type="number"
+  1397→                  value={form.tourHanches}
+  1398→                  onChange={(e) =>
+  1399→                    setForm({ ...form, tourHanches: e.target.value })
+  1400→                  }
+  1401→                  placeholder="0"
+  1402→                />
+  1403→              </div>
+  1404→              <div className="space-y-1">
+  1405→                <Label className="text-xs">Longueur manche</Label>
+  1406→                <Input
+  1407→                  type="number"
+  1408→                  value={form.longueurManche}
+  1409→                  onChange={(e) =>
+  1410→                    setForm({ ...form, longueurManche: e.target.value })
+  1411→                  }
+  1412→                  placeholder="0"
+  1413→                />
+  1414→              </div>
+  1415→              <div className="space-y-1 col-span-2 md:col-span-3">
+  1416→                <Label className="text-xs">Autres dimensions</Label>
+  1417→                <Textarea
+  1418→                  rows={2}
+  1419→                  value={form.autreDimensions}
+  1420→                  onChange={(e) =>
+  1421→                    setForm({ ...form, autreDimensions: e.target.value })
+  1422→                  }
+  1423→                  placeholder="Détails complémentaires (tour de cou, hauteur totale, etc.)"
+  1424→                />
+  1425→              </div>
+  1426→            </div>
+  1427→          </div>
+  1428→
+  1429→          {/* Date de l'annonce/pièce */}
+  1430→          <div className="space-y-1.5">
+  1431→            <Label>Date de l&apos;annonce / pièce</Label>
+  1432→            <Input
+  1433→              type="date"
+  1434→              value={form.datePiece}
+  1435→              onChange={(e) =>
+  1436→                setForm({ ...form, datePiece: e.target.value })
+  1437→              }
+  1438→            />
+  1439→          </div>
+  1440→        </div>
+  1441→        <DialogFooter>
+  1442→          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+  1443→            Annuler
+  1444→          </Button>
+  1445→          <Button
+  1446→            onClick={save}
+  1447→            disabled={saving}
+  1448→            className="bg-emerald hover:bg-emerald-deep text-ivory"
+  1449→          >
+  1450→            {saving ? "Enregistrement..." : "Enregistrer"}
+  1451→          </Button>
+  1452→        </DialogFooter>
+  1453→      </DialogContent>
+  1454→    </Dialog>
+  1455→  );
+  1456→}
+  1457→
+  1458→/* ============================================================
+  1459→   3. Commandes section
+  1460→============================================================ */
+  1461→
+  1462→function CommandesSection() {
+  1463→  const [commandes, setCommandes] = useState<Commande[]>([]);
+  1464→  const [loading, setLoading] = useState(true);
+  1465→  const [filterStatut, setFilterStatut] = useState<string>("tous");
+  1466→  const [detailCmd, setDetailCmd] = useState<Commande | null>(null);
+  1467→  const [openDetail, setOpenDetail] = useState(false);
+  1468→  const [openManual, setOpenManual] = useState(false);
+  1469→
+  1470→  const load = useCallback(() => {
+  1471→    setLoading(true);
+  1472→    adminApi<Commande[]>("/api/commandes")
+  1473→      .then(setCommandes)
+  1474→      .catch((e) => toast.error(e.message))
+  1475→      .finally(() => setLoading(false));
+  1476→  }, []);
+  1477→
+  1478→  useEffect(() => {
+  1479→    // eslint-disable-next-line react-hooks/set-state-in-effect
+  1480→    load();
+  1481→  }, [load]);
+  1482→
+  1483→  const filtered = commandes.filter(
+  1484→    (c) => filterStatut === "tous" || c.statut === filterStatut
+  1485→  );
+  1486→  const enAttenteCount = commandes.filter(
+  1487→    (c) => c.statut === "en_attente"
+  1488→  ).length;
+  1489→
+  1490→  return (
+  1491→    <div className="space-y-6">
+  1492→      <div className="flex items-center justify-between flex-wrap gap-3">
+  1493→        <div>
+  1494→          <h1 className="font-display text-2xl text-emerald-deep">
+  1495→            Commandes
+  1496→          </h1>
+  1497→          <p className="text-sm text-muted-foreground">
+  1498→            {commandes.length} commande{commandes.length > 1 ? "s" : ""}
+  1499→            {enAttenteCount > 0 && (
+  1500→              <span className="text-destructive font-medium">
+  1501→                {" "}
+  1502→                · {enAttenteCount} nouvelle
+  1503→                {enAttenteCount > 1 ? "s" : ""} demande
+  1504→                {enAttenteCount > 1 ? "s" : ""}
+  1505→              </span>
+  1506→            )}
+  1507→          </p>
+  1508→        </div>
+  1509→        <Button
+  1510→          className="bg-emerald hover:bg-emerald-deep text-ivory"
+  1511→          onClick={() => setOpenManual(true)}
+  1512→        >
+  1513→          <Plus className="w-4 h-4 mr-1" /> Ajouter une commande
+  1514→        </Button>
+  1515→      </div>
+  1516→
+  1517→      {/* Filter tabs */}
+  1518→      <div className="flex flex-wrap gap-2">
+  1519→        {["tous", "en_attente", "en_confection", "expediee", "livree", "annulee"].map(
+  1520→          (s) => {
+  1521→            const count =
+  1522→              s === "tous"
+  1523→                ? commandes.length
+  1524→                : commandes.filter((c) => c.statut === s).length;
+  1525→            const active = filterStatut === s;
+  1526→            return (
+  1527→              <button
+  1528→                key={s}
+  1529→                onClick={() => setFilterStatut(s)}
+  1530→                className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+  1531→                  active
+  1532→                    ? "bg-emerald text-ivory border-emerald"
+  1533→                    : "bg-card text-foreground border-border hover:border-emerald/40"
+  1534→                }`}
+  1535→              >
+  1536→                {s === "tous" ? "Tous" : STATUT_LABELS[s]}
+  1537→                {count > 0 && <span className="opacity-70 ml-1">({count})</span>}
+  1538→                {s === "en_attente" && count > 0 && (
+  1539→                  <span className="ml-2 inline-flex items-center justify-center min-w-4 h-4 px-1 text-[10px] bg-destructive text-white rounded-full">
+  1540→                    {count}
+  1541→                  </span>
+  1542→                )}
+  1543→              </button>
+  1544→            );
+  1545→          }
+  1546→        )}
+  1547→      </div>
+  1548→
+  1549→      <Card className="p-0">
+  1550→        {loading ? (
+  1551→          <div className="p-4 space-y-2">
+  1552→            {Array.from({ length: 6 }).map((_, i) => (
+  1553→              <Skeleton key={i} className="h-12 w-full" />
+  1554→            ))}
+  1555→          </div>
+  1556→        ) : (
+  1557→          <div className="overflow-x-auto">
+  1558→            <Table>
+  1559→              <TableHeader>
+  1560→                <TableRow>
+  1561→                  <TableHead>Réf.</TableHead>
+  1562→                  <TableHead>Client</TableHead>
+  1563→                  <TableHead className="hidden md:table-cell">Date</TableHead>
+  1564→                  <TableHead>Statut</TableHead>
+  1565→                  <TableHead className="text-right">Montant</TableHead>
+  1566→                  <TableHead className="w-12"></TableHead>
+  1567→                </TableRow>
+  1568→              </TableHeader>
+  1569→              <TableBody>
+  1570→                {filtered.length === 0 && (
+  1571→                  <TableRow>
+  1572→                    <TableCell
+  1573→                      colSpan={6}
+  1574→                      className="text-center text-muted-foreground py-8"
+  1575→                    >
+  1576→                      Aucune commande
+  1577→                    </TableCell>
+  1578→                  </TableRow>
+  1579→                )}
+  1580→                {filtered.map((c) => (
+  1581→                  <TableRow key={c.id}>
+  1582→                    <TableCell className="font-mono text-xs">
+  1583→                      {c.reference}
+  1584→                    </TableCell>
+  1585→                    <TableCell>
+  1586→                      <div className="text-sm">
+  1587→                        <div className="font-medium">
+  1588→                          {c.client
+  1589→                            ? `${c.client.prenom} ${c.client.nom}`
+  1590→                            : "—"}
+  1591→                        </div>
+  1592→                        <div className="text-xs text-muted-foreground flex items-center gap-1">
+  1593→                          <Phone className="w-3 h-3" />
+  1594→                          {c.client?.telephone || "—"}
+  1595→                        </div>
+  1596→                      </div>
+  1597→                    </TableCell>
+  1598→                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
+  1599→                      {formatDate(c.dateCommande)}
+  1600→                    </TableCell>
+  1601→                    <TableCell>
+  1602→                      <StatutBadge statut={c.statut} />
+  1603→                    </TableCell>
+  1604→                    <TableCell className="text-right font-medium">
+  1605→                      {formatMAD(c.montantTotal)}
+  1606→                    </TableCell>
+  1607→                    <TableCell>
+  1608→                      <Button
+  1609→                        variant="ghost"
+  1610→                        size="sm"
+  1611→                        onClick={() => {
+  1612→                          setDetailCmd(c);
+  1613→                          setOpenDetail(true);
+  1614→                        }}
+  1615→                      >
+  1616→                        <Eye className="w-4 h-4" />
+  1617→                      </Button>
+  1618→                    </TableCell>
+  1619→                  </TableRow>
+  1620→                ))}
+  1621→              </TableBody>
+  1622→            </Table>
+  1623→          </div>
+  1624→        )}
+  1625→      </Card>
+  1626→
+  1627→      {openDetail && detailCmd && (
+  1628→        <CommandeDetailDialog
+  1629→          id={detailCmd.id}
+  1630→          open={openDetail}
+  1631→          onOpenChange={(o) => {
+  1632→            setOpenDetail(o);
+  1633→            if (!o) load();
+  1634→          }}
+  1635→        />
+  1636→      )}
+  1637→
+  1638→      <ManualOrderDialog
+  1639→        open={openManual}
+  1640→        onOpenChange={(o) => {
+  1641→          setOpenManual(o);
+  1642→          if (!o) load();
+  1643→        }}
+  1644→      />
+  1645→    </div>
+  1646→  );
+  1647→}
+  1648→
+  1649→function CommandeDetailDialog({
+  1650→  id,
+  1651→  open,
+  1652→  onOpenChange,
+  1653→}: {
+  1654→  id: number;
+  1655→  open: boolean;
+  1656→  onOpenChange: (o: boolean) => void;
+  1657→}) {
+  1658→  const [cmd, setCmd] = useState<Commande | null>(null);
+  1659→  const [loading, setLoading] = useState(true);
+  1660→  const [statut, setStatut] = useState("");
+  1661→  const [notes, setNotes] = useState("");
+  1662→  const [dateRetrait, setDateRetrait] = useState("");
+  1663→  const [saving, setSaving] = useState(false);
+  1664→
+  1665→  const load = useCallback(() => {
+  1666→    setLoading(true);
+  1667→    adminApi<Commande>(`/api/commandes/${id}`)
+  1668→      .then((c) => {
+  1669→        setCmd(c);
+  1670→        setStatut(c.statut);
+  1671→        setNotes(c.notes || "");
+  1672→        setDateRetrait(
+  1673→          c.dateRetrait
+  1674→            ? new Date(c.dateRetrait).toISOString().slice(0, 10)
+  1675→            : ""
+  1676→        );
+  1677→      })
+  1678→      .catch((e) => toast.error(e.message))
+  1679→      .finally(() => setLoading(false));
+  1680→  }, [id]);
+  1681→
+  1682→  useEffect(() => {
+  1683→    if (open) load();
+  1684→  }, [open, load]);
+  1685→
+  1686→  async function saveStatut() {
+  1687→    if (!cmd) return;
+  1688→    setSaving(true);
+  1689→    try {
+  1690→      await adminApi(`/api/commandes/${cmd.id}`, {
+  1691→        method: "PUT",
+  1692→        body: JSON.stringify({
+  1693→          statut,
+  1694→          notes,
+  1695→          dateRetrait: dateRetrait || null,
+  1696→        }),
+  1697→      });
+  1698→      toast.success("Commande mise à jour");
+  1699→      load();
+  1700→    } catch (e) {
+  1701→      toast.error(e instanceof Error ? e.message : "Erreur");
+  1702→    } finally {
+  1703→      setSaving(false);
+  1704→    }
+  1705→  }
+  1706→
+  1707→  return (
+  1708→    <Dialog open={open} onOpenChange={onOpenChange}>
+  1709→      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+  1710→        <DialogHeader>
+  1711→          <DialogTitle className="flex items-center gap-3 flex-wrap">
+  1712→            Commande {cmd?.reference}
+  1713→            {cmd && <StatutBadge statut={cmd.statut} />}
+  1714→          </DialogTitle>
+  1715→        </DialogHeader>
+  1716→        {loading || !cmd ? (
+  1717→          <div className="space-y-2">
+  1718→            {Array.from({ length: 4 }).map((_, i) => (
+  1719→              <Skeleton key={i} className="h-10 w-full" />
+  1720→            ))}
+  1721→          </div>
+  1722→        ) : (
+  1723→          <div className="space-y-5">
+  1724→            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+  1725→              <div>
+  1726→                <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mb-1">
+  1727→                  Client
+  1728→                </p>
+  1729→                <p className="font-medium">
+  1730→                  {cmd.client?.prenom} {cmd.client?.nom}
+  1731→                </p>
+  1732→                {cmd.client?.telephone && (
+  1733→                  <p className="text-muted-foreground flex items-center gap-1">
+  1734→                    <Phone className="w-3 h-3" />
+  1735→                    {cmd.client.telephone}
+  1736→                  </p>
+  1737→                )}
+  1738→                {cmd.client?.email && (
+  1739→                  <p className="text-muted-foreground">{cmd.client.email}</p>
+  1740→                )}
+  1741→              </div>
+  1742→              <div>
+  1743→                <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mb-1">
+  1744→                  Détails
+  1745→                </p>
+  1746→                <p className="text-muted-foreground">
+  1747→                  Date : {formatDate(cmd.dateCommande)}
+  1748→                </p>
+  1749→                {cmd.dateRetrait && (
+  1750→                  <p className="text-muted-foreground">
+  1751→                    Retrait : {formatDate(cmd.dateRetrait)}
+  1752→                  </p>
+  1753→                )}
+  1754→              </div>
+  1755→            </div>
+  1756→
+  1757→            <div>
+  1758→              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mb-2">
+  1759→                Articles
+  1760→              </p>
+  1761→              <div className="border border-border rounded-md divide-y divide-border">
+  1762→                {cmd.lignes?.map((l, i) => (
+  1763→                  <div key={i} className="flex items-center gap-3 p-3">
+  1764→                    <ProduitThumb
+  1765→                      photos={l.produit?.photos || ""}
+  1766→                      alt={l.produit?.nom || ""}
+  1767→                    />
+  1768→                    <div className="flex-1 min-w-0">
+  1769→                      <p className="text-sm font-medium truncate">
+  1770→                        {l.produit?.nom || `Produit #${l.idProduit}`}
+  1771→                      </p>
+  1772→                      <p className="text-xs text-muted-foreground">
+  1773→                        {l.quantite} × {formatMAD(l.prixUnitaire)}
+  1774→                        {l.surMesure && (
+  1775→                          <span className="ml-2 text-gold-deep">
+  1776→                            · sur-mesure
+  1777→                          </span>
+  1778→                        )}
+  1779→                      </p>
+  1780→                    </div>
+  1781→                    <span className="font-medium text-sm">
+  1782→                      {formatMAD(l.prixUnitaire * l.quantite)}
+  1783→                    </span>
+  1784→                  </div>
+  1785→                ))}
+  1786→                {(!cmd.lignes || cmd.lignes.length === 0) && (
+  1787→                  <p className="p-3 text-sm text-muted-foreground">
+  1788→                    Aucun article
+  1789→                  </p>
+  1790→                )}
+  1791→              </div>
+  1792→            </div>
+  1793→
+  1794→            <div className="bg-muted/40 rounded-md p-3 text-center">
+  1795→              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+  1796→                Total de la commande
+  1797→              </p>
+  1798→              <p className="font-display text-2xl text-emerald-deep">
+  1799→                {formatMAD(cmd.montantTotal)}
+  1800→              </p>
+  1801→            </div>
+  1802→
+  1803→            {cmd.notes && (
+  1804→              <div>
+  1805→                <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] mb-1">
+  1806→                  Notes
+  1807→                </p>
+  1808→                <p className="text-sm bg-muted/40 p-3 rounded-md whitespace-pre-wrap">
+  1809→                  {cmd.notes}
+  1810→                </p>
+  1811→              </div>
+  1812→            )}
+  1813→
+  1814→            <Separator />
+  1815→
+  1816→            <div className="space-y-3">
+  1817→              <h4 className="font-display text-base text-emerald-deep">
+  1818→                Mettre à jour la commande
+  1819→              </h4>
+  1820→              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+  1821→                <div className="space-y-1">
+  1822→                  <Label className="text-xs">Statut</Label>
+  1823→                  <Select value={statut} onValueChange={setStatut}>
+  1824→                    <SelectTrigger className="w-full">
+  1825→                      <SelectValue />
+  1826→                    </SelectTrigger>
+  1827→                    <SelectContent>
+  1828→                      {Object.entries(STATUT_LABELS).map(([k, v]) => (
+  1829→                        <SelectItem key={k} value={k}>
+  1830→                          {v}
+  1831→                        </SelectItem>
+  1832→                      ))}
+  1833→                    </SelectContent>
+  1834→                  </Select>
+  1835→                </div>
+  1836→                <div className="space-y-1">
+  1837→                  <Label className="text-xs">Date de retrait</Label>
+  1838→                  <Input
+  1839→                    type="date"
+  1840→                    value={dateRetrait}
+  1841→                    onChange={(e) => setDateRetrait(e.target.value)}
+  1842→                  />
+  1843→                </div>
+  1844→              </div>
+  1845→              <div className="space-y-1">
+  1846→                <Label className="text-xs">Notes internes</Label>
+  1847→                <Textarea
+  1848→                  value={notes}
+  1849→                  onChange={(e) => setNotes(e.target.value)}
+  1850→                  rows={2}
+  1851→                />
+  1852→              </div>
+  1853→              <Button
+  1854→                onClick={saveStatut}
+  1855→                disabled={saving}
+  1856→                className="bg-emerald hover:bg-emerald-deep text-ivory"
+  1857→              >
+  1858→                <Save className="w-4 h-4 mr-1" />{" "}
+  1859→                {saving ? "Enregistrement..." : "Enregistrer"}
+  1860→              </Button>
+  1861→            </div>
+  1862→          </div>
+  1863→        )}
+  1864→      </DialogContent>
+  1865→    </Dialog>
+  1866→  );
+  1867→}
+  1868→
+  1869→type LigneForm = {
+  1870→  produit: Produit;
+  1871→  quantite: number;
+  1872→  prixUnitaire: number;
+  1873→  surMesure: boolean;
+  1874→  taille: string;
+  1875→  couleur: string;
+  1876→};
+  1877→
+  1878→function ManualOrderDialog({
+  1879→  open,
+  1880→  onOpenChange,
+  1881→}: {
+  1882→  open: boolean;
+  1883→  onOpenChange: (o: boolean) => void;
+  1884→}) {
+  1885→  // Client search state
+  1886→  const [clients, setClients] = useState<Client[]>([]);
+  1887→  const [produits, setProduits] = useState<Produit[]>([]);
+  1888→  const [clientSearch, setClientSearch] = useState("");
+  1889→  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  1890→  const [newClientMode, setNewClientMode] = useState(false);
+  1891→  const [newClient, setNewClient] = useState({
+  1892→    nom: "",
+  1893→    prenom: "",
+  1894→    telephone: "",
+  1895→    email: "",
+  1896→  });
+  1897→
+  1898→  // Produits lignes
+  1899→  const [lignes, setLignes] = useState<LigneForm[]>([]);
+  1900→  const [productSearch, setProductSearch] = useState("");
+  1901→
+  1902→  // Mesures
+  1903→  const [withMesures, setWithMesures] = useState(false);
+  1904→  const [mesures, setMesures] = useState<Record<string, string>>({
+  1905→    tourPoitrine: "",
+  1906→    tourTaille: "",
+  1907→    tourHanches: "",
+  1908→    longueurRobe: "",
+  1909→    longueurManche: "",
+  1910→    longueurEpaule: "",
+  1911→    tourBras: "",
+  1912→    notes: "",
+  1913→  });
+  1914→
+  1915→  // Logistique
+  1916→  const [dateRetrait, setDateRetrait] = useState("");
+  1917→  const [statut, setStatut] = useState("en_attente");
+  1918→
+  1919→  // Confirmation
+  1920→  const [confirme, setConfirme] = useState(false);
+  1921→  const [notes, setNotes] = useState("");
+  1922→
+  1923→  const [saving, setSaving] = useState(false);
+  1924→
+  1925→  useEffect(() => {
+  1926→    if (!open) return;
+  1927→    adminApi<Client[]>("/api/clients").then(setClients).catch(() => {});
+  1928→    adminApi<Produit[]>("/api/produits").then(setProduits).catch(() => {});
+  1929→  }, [open]);
+  1930→
+  1931→  // Reset on close
+  1932→  useEffect(() => {
+  1933→    if (open) return;
+  1934→    setClientSearch("");
+  1935→    setSelectedClient(null);
+  1936→    setNewClientMode(false);
+  1937→    setNewClient({ nom: "", prenom: "", telephone: "", email: "" });
+  1938→    setLignes([]);
+  1939→    setProductSearch("");
+  1940→    setWithMesures(false);
+  1941→    setMesures({
+  1942→      tourPoitrine: "",
+  1943→      tourTaille: "",
+  1944→      tourHanches: "",
+  1945→      longueurRobe: "",
+  1946→      longueurManche: "",
+  1947→      longueurEpaule: "",
+  1948→      tourBras: "",
+  1949→      notes: "",
+  1950→    });
+  1951→    setDateRetrait("");
+  1952→    setStatut("en_attente");
+  1953→    setConfirme(false);
+  1954→    setNotes("");
+  1955→  }, [open]);
+  1956→
+  1957→  const filteredClients = clientSearch
+  1958→    ? clients
+  1959→        .filter((c) => {
+  1960→          const q = clientSearch.toLowerCase();
+  1961→          return (
+  1962→            c.telephone.includes(clientSearch) ||
+  1963→            c.nom.toLowerCase().includes(q) ||
+  1964→            c.prenom.toLowerCase().includes(q)
+  1965→          );
+  1966→        })
+  1967→        .slice(0, 6)
+  1968→    : [];
+  1969→
+  1970→  const filteredProducts = productSearch
+  1971→    ? produits
+  1972→        .filter((p) => {
+  1973→          const q = productSearch.toLowerCase();
+  1974→          return (
+  1975→            p.nom.toLowerCase().includes(q) ||
+  1976→            (p.categorie?.libelle || "").toLowerCase().includes(q)
+  1977→          );
+  1978→        })
+  1979→        .slice(0, 6)
+  1980→    : [];
+  1981→
+  1982→  const montantTotal = lignes.reduce(
+  1983→    (s, l) => s + l.prixUnitaire * l.quantite,
+  1984→    0
+  1985→  );
+  1986→
+  1987→  function addLigne(p: Produit) {
+  1988→    setLignes((l) => [
+  1989→      ...l,
+  1990→      {
+  1991→        produit: p,
+  1992→        quantite: 1,
+  1993→        prixUnitaire: p.prix,
+  1994→        surMesure: false,
+  1995→        taille: "",
+  1996→        couleur: "",
+  1997→      },
+  1998→    ]);
+  1999→    setProductSearch("");
+  2000→  }
+
+[showing lines 1-2000 of 3678; use offset=2001 with limit to continue reading]

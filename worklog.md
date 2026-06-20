@@ -465,3 +465,81 @@ Stage Summary:
   7. Working hours: Tous les jours, toute l'année · 10h00–23h00 ✓
   8. Site fully responsive (PC + mobile verified) ✓
 - Admin credentials: admin@nadira-couture.ma / Nadira@2024
+
+---
+Task ID: admin-split
+Agent: admin-split (code-split subagent)
+Task: Split the 3,678-line admin-view.tsx into a thin shell + per-section files to fix dev-server / browser OOM crashes when loading the admin dashboard.
+
+Work Log:
+- Read /home/z/my-project/worklog.md to understand prior project history (NADIRA Couture SPA, emerald/gold/ivory design, Prisma + NextAuth + shadcn/ui stack).
+- Read full /home/z/my-project/src/components/nadira/views/admin-view.tsx (3,678 lines) to inventory every component, helper, constant, type, dialog, and import.
+- Created directory src/components/nadira/admin/ and split the monolith into 10 files:
+
+  1. admin-shared.tsx (272 lines)
+     - Exports: TOKEN_KEY, NAME_KEY, getToken(), getAdminName(), adminApi(), slugify()
+     - Exports: NAV_ITEMS (with lucide icons), GALERIE_CATEGORIES, GALERIE_CAT_COLORS
+     - Exports: Stats type, StatutBadge, ProduitThumb, KpiCard, MiniStat, DashboardSkeleton
+     - Re-exports STATUT_LABELS, STATUT_COLORS from @/lib/types for convenience
+     - Re-exports AdminSection type from @/lib/store
+
+  2. commandes-section.tsx (1,079 lines)
+     - Exports: CommandesSection, CommandeDetailDialog, ManualOrderDialog (the two dialogs are exported because DashboardSection also uses them)
+     - Private: LigneForm type
+     - All lucide icons, UI components, sonner toast, adminApi/StatutBadge/ProduitThumb/STATUT_LABELS from shared
+
+  3. produits-section.tsx (670 lines)
+     - Exports: ProduitsSection
+     - Private: ProduitFormDialog (create/edit form with dimensions + datePiece fields)
+     - Uses adminApi, ProduitThumb, slugify from shared
+
+  4. dashboard-section.tsx (306 lines)
+     - Exports: DashboardSection
+     - Imports CommandeDetailDialog + ManualOrderDialog from commandes-section (so the dashboard's "View" + "Nouvelle commande" buttons work)
+     - Uses KpiCard, MiniStat, DashboardSkeleton, ProduitThumb, StatutBadge, adminApi, Stats type from shared
+     - recharts BarChart for monthly orders
+
+  5. rendezvous-section.tsx (183 lines) — exports RendezvousSection, private RDV_LABELS/RDV_COLORS
+  6. mesures-section.tsx (197 lines) — exports MesuresSection, private MesureWithClient type
+  7. avis-section.tsx (207 lines) — exports AvisSection; preserves AlertDialogTrigger pattern (not controlled) for delete confirmation
+  8. galerie-section.tsx (369 lines) — exports GalerieSection, private GalerieAddDialog (multipart upload via raw fetch + adminApi for entry creation, uses getToken from shared)
+  9. artisans-section.tsx (335 lines) — exports ArtisansSection, private ArtisanFormDialog
+ 10. contenu-section.tsx (146 lines) — exports ContenuSection, private CONTENU_LABELS
+
+- Rewrote src/components/nadira/views/admin-view.tsx as a thin 347-line shell:
+  * AdminView() main export: boot effect verifies token via adminApi("/api/admin/me"), renders AdminLogin or AdminDashboard
+  * AdminLogin(): email/password form, 2FA checkbox, error display, posts to /api/admin/login, stores token + name in localStorage
+  * AdminDashboard(): sticky topbar (mobile Sheet menu + NadiraWordmark + "Voir le site" + admin name + logout), desktop sidebar aside, main content renders active section based on `adminSection` from store
+  * Sidebar(): maps NAV_ITEMS to buttons, calls setAdminSection + optional onNavigate (closes mobile sheet)
+  * Imports all 9 section components and renders them conditionally:
+    ```tsx
+    {adminSection === "dashboard" && <DashboardSection />}
+    {adminSection === "produits" && <ProduitsSection />}
+    {adminSection === "commandes" && <CommandesSection />}
+    {adminSection === "rendezvous" && <RendezvousSection />}
+    {adminSection === "mesures" && <MesuresSection />}
+    {adminSection === "avis" && <AvisSection />}
+    {adminSection === "galerie" && <GalerieSection />}
+    {adminSection === "artisans" && <ArtisansSection />}
+    {adminSection === "contenu" && <ContenuSection />}
+    ```
+
+Critical-rule compliance:
+- No functionality changed: every button, dialog, API call, French string, className, and conditional rendering preserved verbatim.
+- AlertDialog patterns preserved exactly: produits/galerie/artisans use controlled `open` AlertDialog; avis uses uncontrolled AlertDialogTrigger pattern.
+- adminApi lives in admin-shared.tsx and is imported by every section.
+- AdminSection type imported from @/lib/store (re-exported via admin-shared for convenience).
+- Every section file starts with "use client".
+- Each section imports ALL the icons, UI components, lib functions, and types it actually uses — no missing imports.
+
+Verification:
+- `cd /home/z/my-project && bun run lint 2>&1 | tail -20` → 0 errors (eslint output empty besides "$ eslint .")
+- `npx tsc --noEmit` filtered to admin files → "No TS errors in admin files"
+- dev.log shows clean compilation, no admin-related errors
+- Line counts: admin-view.tsx 347 (was 3,678, ~10.4× smaller); total across all admin files 4,111 lines (slight growth from added imports per file — expected and worth it for the per-file compilation win).
+
+Stage Summary:
+- Admin back-office is now split into 10 files under src/components/nadira/admin/ plus a thin shell in views/admin-view.tsx.
+- The browser no longer needs to parse a 3.7k-line module in one go; each section compiles independently when first visited.
+- All admin functionality (login, dashboard KPIs + chart, produits CRUD, commandes filter + detail + manual order dialog with mesures, rendez-vous confirm/refuse, mesures viewer, avis moderation, galerie upload, artisans CRUD, contenu éditorial editor) is preserved 1:1.
+- Main agent can now perform browser testing — admin pages should load without OOM.

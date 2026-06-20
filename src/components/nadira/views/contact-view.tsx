@@ -45,7 +45,7 @@ export function ContactView({ contenu }: { contenu: Record<string, string> }) {
   const adresse = contenu.contact_adresse || "Quartier Salam, Agadir";
   const email = contenu.contact_email || "couture.nadira2026@gmail.com";
   const horaires = contenu.contact_horaires || "Tous les jours, toute l'année · 10h00–23h00";
-  const instagram = contenu.reseaux_instagram || "https://www.instagram.com/couture_nadira";
+  const instagram = contenu.reseaux_instagram || "https://www.instagram.com/couture_nadira?igsh=bjZneDIzMGVudHBn";
   const mapsLink = contenu.contact_maps || "https://maps.apple/p/osTsur6u9BnDAr";
 
   // Form state

@@ -255,7 +255,7 @@ async function main() {
     { cle: "contact_horaires", valeur: "Tous les jours, toute l'année · 10h00–23h00" },
     { cle: "citation_1", valeur: "« Le fil d'or ne ment pas : il garde la mémoire des mains qui l'ont tiré. »" },
     { cle: "citation_2", valeur: "« Un caftan n'est jamais terminé. Il s'endort et se réveille avec celle qui le porte. »" },
-    { cle: "reseaux_instagram", valeur: "https://www.instagram.com/couture_nadira" },
+    { cle: "reseaux_instagram", valeur: "https://www.instagram.com/couture_nadira?igsh=bjZneDIzMGVudHBn" },
   ];
   for (const c of contenus) {
     await db.contenu.upsert({
