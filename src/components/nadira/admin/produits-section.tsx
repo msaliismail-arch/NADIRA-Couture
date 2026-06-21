@@ -823,10 +823,29 @@ function ProduitFormDialog({
 /* ============================================================
    PhotoPreview — handles loading, error, and loaded states
    for a single product photo thumbnail.
+   Includes a retry mechanism and URL rewriting for old upload paths.
 ============================================================ */
 function PhotoPreview({ url, index }: { url: string; index: number }) {
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
-  // Component is remounted via key={url} when URL changes, so initial state is always "loading"
+  const [retries, setRetries] = useState(0);
+
+  // Rewrite old-style /uploads/xxx.jpg to /api/uploads/xxx.jpg
+  // so the image is served through the reliable API route.
+  const displayUrl = url.startsWith("/uploads/")
+    ? `/api/uploads/${url.slice("/uploads/".length)}`
+    : url;
+
+  // Retry up to 2 times with a short delay (handles timing issues
+  // where the file might not be fully flushed to disk yet)
+  useEffect(() => {
+    if (status === "error" && retries < 2) {
+      const timer = setTimeout(() => {
+        setRetries((r) => r + 1);
+        setStatus("loading");
+      }, 500 * (retries + 1));
+      return () => clearTimeout(timer);
+    }
+  }, [status, retries]);
 
   return (
     <>
@@ -842,7 +861,8 @@ function PhotoPreview({ url, index }: { url: string; index: number }) {
         </div>
       )}
       <img
-        src={url}
+        key={`${displayUrl}-${retries}`}
+        src={displayUrl}
         alt={`Photo ${index + 1}`}
         className={`w-full h-full object-cover transition-opacity duration-200 ${status === "loaded" ? "opacity-100" : "opacity-0"}`}
         onLoad={() => setStatus("loaded")}

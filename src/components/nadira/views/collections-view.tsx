@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { api, formatMAD } from "@/lib/api";
+import { api, formatMAD, normalizeImageUrl } from "@/lib/api";
 import type { Produit, Categorie } from "@/lib/types";
 import { GoldDivider, KhatimStar } from "@/components/nadira/brand";
 import { useReveal } from "@/hooks/use-reveal";
@@ -459,7 +459,7 @@ function ProductCard({
   const photos = produit.photos
     ? produit.photos.split(",").map((s) => s.trim()).filter(Boolean)
     : [];
-  const cover = photos[0] || "/images/placeholder.jpg";
+  const cover = normalizeImageUrl(photos[0] || "/images/placeholder.jpg");
 
   return (
     <article

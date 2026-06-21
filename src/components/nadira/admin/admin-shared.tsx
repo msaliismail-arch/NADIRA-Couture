@@ -8,6 +8,7 @@
 import type { Commande } from "@/lib/types";
 import { STATUT_LABELS, STATUT_COLORS } from "@/lib/types";
 import type { AdminSection } from "@/lib/store";
+import { normalizeImageUrl } from "@/lib/api";
 
 // shadcn/ui
 import { Card } from "@/components/ui/card";
@@ -181,7 +182,7 @@ export function ProduitThumb({
     <div className="w-10 h-10 rounded-md overflow-hidden bg-muted border border-border shrink-0">
       {first ? (
         <img
-          src={first}
+          src={normalizeImageUrl(first)}
           alt={alt}
           className="w-full h-full object-cover"
           onError={(e) => {

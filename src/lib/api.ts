@@ -22,6 +22,23 @@ export async function api<T = unknown>(
   return res.json() as Promise<T>;
 }
 
+/**
+ * Normalize an image URL so uploaded images are always served through
+ * the reliable API route (bypasses Next.js static file serving issues
+ * in dev mode for newly created files).
+ * - /uploads/xxx.jpg  → /api/uploads/xxx.jpg
+ * - /api/uploads/xxx.jpg → unchanged
+ * - /images/xxx.jpg → unchanged (static, existed at server start)
+ * - https://... → unchanged (external URLs)
+ */
+export function normalizeImageUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("/uploads/")) {
+    return `/api/uploads/${url.slice("/uploads/".length)}`;
+  }
+  return url;
+}
+
 export const formatMAD = (n: number) =>
   new Intl.NumberFormat("fr-MA", {
     style: "currency",

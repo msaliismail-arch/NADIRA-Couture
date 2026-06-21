@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/lib/store";
-import { api, formatMAD, formatDate } from "@/lib/api";
+import { api, formatMAD, formatDate, normalizeImageUrl } from "@/lib/api";
 import type { Produit, Categorie, Artisan } from "@/lib/types";
 import { NadiraMonogram, GoldDivider, KhatimStar } from "@/components/nadira/brand";
 import { useReveal } from "@/hooks/use-reveal";
@@ -1164,7 +1164,8 @@ function parsePhotos(photos: string | null | undefined): string[] {
   return photos
     .split(",")
     .map((s) => s.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(normalizeImageUrl);
 }
 
 function parseCouleurs(couleurs: string | null | undefined): string[] {

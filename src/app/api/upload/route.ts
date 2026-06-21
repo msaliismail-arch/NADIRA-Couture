@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const filepath = path.join(uploadDir, filename);
     await writeFile(filepath, buffer);
 
-    return NextResponse.json({ url: `/uploads/${filename}` });
+    return NextResponse.json({ url: `/api/uploads/${filename}` });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Erreur serveur" },

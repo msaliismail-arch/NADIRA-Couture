@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Galerie } from "@/lib/types";
-import { api } from "@/lib/api";
+import { api, normalizeImageUrl } from "@/lib/api";
 
 // shadcn/ui
 import { Button } from "@/components/ui/button";
@@ -127,7 +127,7 @@ export function GalerieSection() {
             <Card key={p.id} className="overflow-hidden p-0 group">
               <div className="aspect-square bg-muted overflow-hidden">
                 <img
-                  src={p.url}
+                  src={normalizeImageUrl(p.url)}
                   alt={p.legende || "Photo galerie"}
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
                   onError={(e) => {

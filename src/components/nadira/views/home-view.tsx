@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
-import { api, formatMAD } from "@/lib/api";
+import { api, formatMAD, normalizeImageUrl } from "@/lib/api";
 import type { Produit, Avis } from "@/lib/types";
 import {
   NadiraMonogram,
@@ -19,7 +19,7 @@ import { ArrowRight, Star, ChevronDown, Sparkles } from "lucide-react";
 
 function firstPhoto(photos: string): string {
   const p = (photos || "").split(",")[0]?.trim();
-  return p || "/images/caftan-zellige.jpg";
+  return normalizeImageUrl(p || "/images/caftan-zellige.jpg");
 }
 
 function Reveal({

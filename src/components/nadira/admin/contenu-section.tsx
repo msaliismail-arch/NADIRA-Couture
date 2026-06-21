@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { Contenu } from "@/lib/types";
+import { normalizeImageUrl } from "@/lib/api";
 
 // shadcn/ui
 import { Button } from "@/components/ui/button";
@@ -408,7 +409,7 @@ function ChapterEditor({
           {imageUrl && (
             <div className="relative w-24 h-24 rounded-md overflow-hidden border border-border group">
               <img
-                src={imageUrl}
+                src={normalizeImageUrl(imageUrl)}
                 alt={`Chapitre ${number}`}
                 className="w-full h-full object-cover"
               />
