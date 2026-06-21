@@ -128,7 +128,7 @@ export function HomeView({ contenu }: { contenu: Record<string, string> }) {
             </h2>
             <GoldDivider />
             <p className="text-emerald/70 max-w-xl mx-auto leading-relaxed">
-              Une sélection de nos créations les plus précieuses, façonnées à la main dans l&apos;atelier de Fès.
+              Une sélection de nos créations les plus précieuses, façonnées à la main dans l&apos;atelier de Agadir.
             </p>
           </Reveal>
 
@@ -336,7 +336,7 @@ export function HomeView({ contenu }: { contenu: Record<string, string> }) {
           <div className="mt-8 flex items-center justify-center gap-3">
             <span className="h-px w-20 gold-line" />
             <span className="text-[10px] tracking-[0.4em] uppercase text-ivory/50">
-              NADIRA · Fès
+              NADIRA · Agadir
             </span>
             <span className="h-px w-20 gold-line" />
           </div>
@@ -355,7 +355,7 @@ export function HomeView({ contenu }: { contenu: Record<string, string> }) {
             Offrez-vous une pièce unique
           </h2>
           <p className="text-emerald/70 max-w-xl mx-auto leading-relaxed mb-8">
-            Prenez rendez-vous à l&apos;atelier de Fès pour une consultation privée. Nous façonnons à vos mesures un caftan qui vous ressemble.
+            Prenez rendez-vous à l&apos;atelier de Agadir pour une consultation privée. Nous façonnons à vos mesures un caftan qui vous ressemble.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <button

@@ -63,7 +63,7 @@ const PROCESS_STEPS = [
     num: "01",
     icon: Calendar,
     title: "Rendez-vous",
-    desc: "Essayage en atelier à Fès ou consultation virtuelle pour cerner votre désir et définir la pièce.",
+    desc: "Essayage en atelier à Agadir ou consultation virtuelle pour cerner votre désir et définir la pièce.",
   },
   {
     num: "02",
@@ -276,7 +276,7 @@ function Hero() {
           L'expérience sur-mesure NADIRA suit un rituel en trois temps :
           le rendez-vous où s'échange le désir, la prise de mesures au centimètre
           près, puis la confection patiente de votre pièce dans nos ateliers de
-          Fès. Trois étapes, une seule promesse — un vêtement qui n'appartient
+          Agadir. Trois étapes, une seule promesse — un vêtement qui n'appartient
           qu'à vous.
         </p>
       </div>
@@ -539,7 +539,7 @@ function MeasurementSection(props: {
                         Essayage en atelier
                       </div>
                       <div className="text-xs text-foreground/65 mt-0.5">
-                        Fès · médina · sur rendez-vous
+                        Quartier Salam, Agadir · sur rendez-vous
                       </div>
                     </div>
                   </label>

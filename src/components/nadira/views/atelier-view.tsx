@@ -23,9 +23,9 @@ import { cn } from "@/lib/utils";
 const TECHNIQUES = [
   {
     icon: Scissors,
-    title: "Point de Fès",
+    title: "Point de Agadir",
     short: "Broderie main",
-    desc: "Point serré exécuté sur métier traditionnel, originaire des ateliers de Fès. Les motifs floraux et géométriques se déploient fil après fil, sans jamais doubler l'étoffe.",
+    desc: "Point serré exécuté sur métier traditionnel, originaire des ateliers de Agadir. Les motifs floraux et géométriques se déploient fil après fil, sans jamais doubler l'étoffe.",
   },
   {
     icon: Spool,
@@ -57,7 +57,7 @@ const NUMBERS = [
 const DEFAULT_ARTISANS: Artisan[] = [
   {
     id: 1, nom: "Fatima Zahra", specialite: "Broderie main",
-    biographie: "Trente-deux ans derrière le métier. Elle connaît par cœur les 84 points du répertoire de Fès.",
+    biographie: "Trente-deux ans derrière le métier. Elle connaît par cœur les 84 points du répertoire de Agadir.",
     photo: "/images/artisan-1.jpg", ordre: 1,
   },
   {
@@ -93,7 +93,7 @@ export function AtelierView({ contenu }: { contenu: Record<string, string> }) {
 
   const atelierTexte =
     contenu.atelier_texte ||
-    "Au cœur de la médina de Fès, l'atelier NADIRA réunit douze artisans qui perpétuent des gestes transmis depuis trois générations. Chaque caftan exige près de deux cents heures de travail, partagées entre la coupe, la broderie main, la sfifa, l'aakad et les finitions.";
+    "Au cœur de Quartier Salam à Agadir, l'atelier NADIRA réunit douze artisans qui perpétuent des gestes transmis depuis trois générations. Chaque caftan exige près de deux cents heures de travail, partagées entre la coupe, la broderie main, la sfifa, l'aakad et les finitions.";
 
   const citation = contenu.citation_2 ||
     "« Le fil retient ce que la parole oublie. »";
@@ -135,7 +135,7 @@ function Hero() {
       >
         <NadiraMonogram className="mx-auto h-14 w-14" animate />
         <p className="mt-6 text-xs uppercase tracking-[0.4em] text-gold-light/80">
-          Fès · Maroc
+          Agadir · Maroc
         </p>
         <h1 className="mt-3 font-display text-5xl sm:text-6xl text-gold-gradient font-semibold">
           L'Atelier
@@ -191,7 +191,7 @@ function Story({ texte }: { texte: string }) {
           <div className="mt-6 space-y-3 text-foreground/75">
             <BulletLine>
               Douze artisans — brodeuses, coupeuses, passementières — partagent
-              la lumière tamisée des patios de Fès.
+              la lumière tamisée des patios de Agadir.
             </BulletLine>
             <BulletLine>
               Quatre techniques y cohabitent : le point de Fès pour la broderie,
