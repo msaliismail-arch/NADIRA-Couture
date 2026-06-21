@@ -156,7 +156,7 @@ export function CollectionsView() {
             Collections
           </h1>
           <p className="text-ivory/75 max-w-2xl text-lg leading-relaxed">
-            Caftans, takchitas, djellabas et accessoires — façonnés main à Fès
+            Caftans, takchitas, djellabas et accessoires — façonnés main à Agadir
           </p>
           <GoldDivider className="!justify-start opacity-70" />
         </div>

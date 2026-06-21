@@ -861,7 +861,7 @@ function SuccessScreen({
               du <span className="text-gold-light">{formatDate(date)}</span>
             </>
           ) : null}
-          {rdvType === "essayage" ? " (essayage en atelier à Fès)." : " (consultation virtuelle)."}
+          {rdvType === "essayage" ? " (essayage en atelier à Agadir)." : " (consultation virtuelle)."}
         </p>
         <p className="mt-2 text-sm text-ivory/60">
           Vous recevrez une confirmation par téléphone dans les 48 heures ouvrées.

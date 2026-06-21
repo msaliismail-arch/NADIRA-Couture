@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // lucide
-import { Save, Upload, X, BookOpen } from "lucide-react";
+import { Save, Upload, X, BookOpen, ImageIcon } from "lucide-react";
 
 // sonner
 import { toast } from "sonner";
@@ -39,6 +39,8 @@ const CONTENU_LABELS: Record<string, string> = {
   histoire_ch3_titre: "Histoire — Titre Chapitre III",
   histoire_ch3_texte: "Histoire — Texte Chapitre III",
   hero_accroche: "Accueil — Accroche Hero",
+  hero_accueil_image: "Accueil — Photo Hero (plein écran)",
+  histoire_accueil_image: "Accueil — Photo section Notre Histoire",
   atelier_texte: "Atelier — Texte",
   contact_adresse: "Contact — Adresse",
   contact_maps: "Contact — Lien Apple Maps",
@@ -80,6 +82,8 @@ const IMAGE_KEYS = new Set([
   "histoire_ch1_image",
   "histoire_ch2_image",
   "histoire_ch3_image",
+  "hero_accueil_image",
+  "histoire_accueil_image",
 ]);
 
 export function ContenuSection() {
@@ -305,12 +309,55 @@ export function ContenuSection() {
             </div>
           </Card>
 
+          {/* ====== Photos de la page d'accueil ====== */}
+          <Card className="p-5 border-2 border-gold/30">
+            <div className="flex items-center gap-2 mb-4">
+              <ImageIcon className="w-5 h-5 text-gold-deep" />
+              <h2 className="font-display text-xl text-emerald-deep">
+                Photos de la page d&apos;accueil
+              </h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Modifiez les photos affichées sur la page d&apos;accueil :
+              la grande image hero (plein écran) et la photo de la section « Notre Histoire ».
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Hero image */}
+              <PhotoEditor
+                label="Photo Hero (plein écran)"
+                description="La grande image de fond en haut de la page d'accueil"
+                contentKey="hero_accueil_image"
+                defaultUrl="/images/hero-atelier.jpg"
+                values={contenuMap}
+                onEdit={(k, v) => setEdits({ ...edits, [k]: v })}
+                onUpload={handleImageUpload}
+                uploading={uploadingKey}
+                onSave={() => saveKey("hero_accueil_image")}
+                saving={saving}
+              />
+              {/* Histoire teaser image */}
+              <PhotoEditor
+                label="Photo section Notre Histoire"
+                description="La photo encadrée à côté du texte « Notre Histoire »"
+                contentKey="histoire_accueil_image"
+                defaultUrl="/images/atelier-heritage.jpg"
+                values={contenuMap}
+                onEdit={(k, v) => setEdits({ ...edits, [k]: v })}
+                onUpload={handleImageUpload}
+                uploading={uploadingKey}
+                onSave={() => saveKey("histoire_accueil_image")}
+                saving={saving}
+              />
+            </div>
+          </Card>
+
           {/* ====== General Content Editor ====== */}
           <div className="space-y-3">
             <h2 className="font-display text-lg text-emerald-deep mt-6">
               Autres contenus
             </h2>
-            {generalContenus.map((c) => {
+            {generalContenus.filter((c) => !["hero_accueil_image", "histoire_accueil_image"].includes(c.cle)).map((c) => {
               const val = edits[c.cle] ?? c.valeur;
               const dirty = edits[c.cle] !== undefined && edits[c.cle] !== c.valeur;
               return (
@@ -438,6 +485,93 @@ function ChapterEditor({
             />
           </label>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   PhotoEditor — editable photo with upload, preview, save
+   Used for homepage images (hero, histoire teaser)
+============================================================ */
+function PhotoEditor({
+  label,
+  description,
+  contentKey,
+  defaultUrl,
+  values,
+  onEdit,
+  onUpload,
+  uploading,
+  onSave,
+  saving,
+}: {
+  label: string;
+  description: string;
+  contentKey: string;
+  defaultUrl: string;
+  values: Record<string, string>;
+  onEdit: (key: string, value: string) => void;
+  onUpload: (key: string, files: FileList | null) => void;
+  uploading: string | null;
+  onSave: () => void;
+  saving: string | null;
+}) {
+  const rawUrl = values[contentKey] ?? "";
+  const imageUrl = rawUrl || defaultUrl;
+  const isDirty = rawUrl !== "" && rawUrl !== defaultUrl;
+  const isUploading = uploading === contentKey;
+
+  return (
+    <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/20">
+      <div>
+        <p className="font-medium text-sm text-emerald-deep">{label}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+      </div>
+
+      {/* Preview */}
+      <div className="relative w-full aspect-[4/3] rounded-md overflow-hidden border border-border bg-muted">
+        <img
+          src={normalizeImageUrl(imageUrl)}
+          alt={label}
+          className="w-full h-full object-cover"
+        />
+        <button
+          type="button"
+          onClick={() => onEdit(contentKey, "")}
+          className="absolute top-1 right-1 w-6 h-6 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity z-10"
+          aria-label="Réinitialiser la photo"
+          title="Réinitialiser"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Upload + Save */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <label className="inline-flex items-center gap-1.5 cursor-pointer rounded-lg border-2 border-dashed border-gold/40 bg-gold/5 px-3 py-2 text-xs text-emerald-deep hover:bg-gold/10 hover:border-gold/60 transition-colors">
+          <Upload className="w-3.5 h-3.5" />
+          {isUploading ? "Upload..." : "Téléverser"}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              onUpload(contentKey, e.target.files);
+              e.target.value = "";
+            }}
+            disabled={isUploading}
+          />
+        </label>
+        <Button
+          size="sm"
+          className="bg-emerald hover:bg-emerald-deep text-ivory"
+          disabled={saving === contentKey || !isDirty}
+          onClick={onSave}
+        >
+          <Save className="w-3 h-3 mr-1" />
+          {saving === contentKey ? "..." : "Enregistrer"}
+        </Button>
       </div>
     </div>
   );

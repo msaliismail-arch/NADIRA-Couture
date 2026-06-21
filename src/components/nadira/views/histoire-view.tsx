@@ -35,11 +35,11 @@ function Reveal({
 /* Story paragraphs (evocative French copy)                           */
 /* ------------------------------------------------------------------ */
 
-const PARAGRAPHE_TRANSMISSION = `Dans la pénombre dorée de l'atelier, les mains de Fatima Zahra guident celles de Salma, comme autrefois celles de Hajja Rachida guidaient les siennes. Le point de Fès, la sfifa, l'aakad : chacun de ces gestes se transmet sans manuel, par la patience du regard et la répétition patiente des mêmes mouvements. Une brodeuse peut mettre vingt ans à maîtriser un seul point. Nous n'en changeons jamais la grammaire.`;
+const PARAGRAPHE_TRANSMISSION = `Dans la pénombre dorée de l'atelier, les mains de Fatima Zahra guident celles de Salma, comme autrefois celles de Hajja Rachida guidaient les siennes. Le point de Agadir, la sfifa, l'aakad : chacun de ces gestes se transmet sans manuel, par la patience du regard et la répétition patiente des mêmes mouvements. Une brodeuse peut mettre vingt ans à maîtriser un seul point. Nous n'en changeons jamais la grammaire.`;
 
-const PARAGRAPHE_FES = `Fès n'est pas un décor pour nous, c'est notre matière première. L'odeur du cuir qui monte des tanneries au loin, le bruit du marteau sur le cuivre dans les souks, la lumière crue de midi qui tombe sur les toits de la médina : tout cela entre dans nos pièces. Quand vous portez un caftan NADIRA, vous portez un peu de cette médina millénaire, de ses ruelles étroites et de ses cours secrètes.`;
+const PARAGRAPHE_FES = `Agadir n'est pas un décor pour nous, c'est notre matière première. L'odeur du cuir qui monte des tanneries au loin, le bruit du marteau sur le cuivre dans les souks, la lumière crue de midi qui tombe sur les toits de notre ville : tout cela entre dans nos pièces. Quand vous portez un caftan NADIRA, vous portez un peu de cette ville, de ses ruelles étroites et de ses cours secrètes.`;
 
-const PARAGRAPHE_SAVOIR_FAIRE = `Broderie main, point de Fès, sfifa, aakad — autant de noms qui désignent des techniques nées dans les cours andalouses et affinées dans les medinas du Maroc. Chaque caftan demande entre 80 et 200 heures de travail. Chaque takchita est pensée comme une architecture : la tahtia, la dtala, le plastron, la ceinture mdamma. Rien n'est laissé au hasard, parce que rien ne l'a jamais été.`;
+const PARAGRAPHE_SAVOIR_FAIRE = `Broderie main, point de Agadir, sfifa, aakad — autant de noms qui désignent des techniques nées dans les cours andalouses et affinées dans les medinas du Maroc. Chaque caftan demande entre 80 et 200 heures de travail. Chaque takchita est pensée comme une architecture : la tahtia, la dtala, le plastron, la ceinture mdamma. Rien n'est laissé au hasard, parce que rien ne l'a jamais été.`;
 
 /* ------------------------------------------------------------------ */
 /* Values                                                             */
@@ -49,7 +49,7 @@ const VALUES = [
   {
     icon: Award,
     title: "Savoir-faire ancestral",
-    text: "Des techniques transmises depuis des générations, préservées dans leur forme la plus pure. Le point de Fès, l'aakad, la sfifa : la grammaire intacte de la couture marocaine.",
+    text: "Des techniques transmises depuis des générations, préservées dans leur forme la plus pure. Le point de Agadir, l'aakad, la sfifa : la grammaire intacte de la couture marocaine.",
   },
   {
     icon: Heart,
@@ -82,7 +82,7 @@ export function HistoireView({ contenu }: { contenu: Record<string, string> }) {
   const { setView } = useStore();
 
   // Chapter content — uses editable contenu values with fallback defaults
-  const ch1Titre = contenu.histoire_ch1_titre || "Née dans la médina de Fès";
+  const ch1Titre = contenu.histoire_ch1_titre || "Née à Agadir";
   const ch1Image = contenu.histoire_ch1_image || "/images/atelier-heritage.jpg";
   const ch2Titre = contenu.histoire_ch2_titre || "Vingt ans pour un point";
   const ch2Texte = contenu.histoire_ch2_texte || PARAGRAPHE_TRANSMISSION;
@@ -146,7 +146,7 @@ export function HistoireView({ contenu }: { contenu: Record<string, string> }) {
             </Reveal>
             <Reveal>
               <p className="text-xs tracking-[0.3em] uppercase text-gold-deep mb-3">
-                Chapitre I · Fès, médina
+                Chapitre I · Agadir
               </p>
               <h2 className="font-display text-3xl sm:text-4xl text-emerald-deep mb-5 leading-tight">
                 {ch1Titre}

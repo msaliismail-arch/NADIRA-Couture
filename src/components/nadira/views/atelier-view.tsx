@@ -194,7 +194,7 @@ function Story({ texte }: { texte: string }) {
               la lumière tamisée des patios de Agadir.
             </BulletLine>
             <BulletLine>
-              Quatre techniques y cohabitent : le point de Fès pour la broderie,
+              Quatre techniques y cohabitent : le point de Agadir pour la broderie,
               la sfifa pour la passementerie, l'aakad pour les boutons tissés,
               et la dentelle de Rabat pour les jours ajourés.
             </BulletLine>

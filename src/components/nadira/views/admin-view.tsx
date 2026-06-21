@@ -320,7 +320,7 @@ function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         </div>
         <div className="h-px gold-line opacity-60" />
         <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
-          Atelier de Fès · Maroc
+          Atelier de Agadir · Maroc
           <br />
           Couture haute joaillerie
         </p>

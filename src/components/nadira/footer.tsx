@@ -150,7 +150,7 @@ export function Footer({ contenu }: { contenu: Record<string, string> }) {
           <p>© {new Date().getFullYear()} NADIRA Couture. Tous droits réservés.</p>
           <p className="flex items-center gap-2">
             <KhatimStar className="h-3 w-3 text-gold/50" />
-            Fait main à Fès, avec passion
+            Fait main à Agadir, avec passion
             <KhatimStar className="h-3 w-3 text-gold/50" />
           </p>
         </div>

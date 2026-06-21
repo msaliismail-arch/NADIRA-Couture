@@ -66,7 +66,7 @@ export function HomeView({ contenu }: { contenu: Record<string, string> }) {
       <section className="relative min-h-[88vh] flex items-center justify-center overflow-hidden">
         {/* Background image */}
         <img
-          src="/images/hero-atelier.jpg"
+          src={normalizeImageUrl(contenu.hero_accueil_image || "/images/hero-atelier.jpg")}
           alt="Atelier NADIRA — lumière dorée sur le velours et la soie"
           className="absolute inset-0 h-full w-full object-cover"
         />
@@ -225,7 +225,7 @@ export function HomeView({ contenu }: { contenu: Record<string, string> }) {
                 <div className="absolute -inset-1 border border-gold/50 rounded-sm" />
                 <div className="relative overflow-hidden rounded-sm">
                   <img
-                    src="/images/atelier-heritage.jpg"
+                    src={normalizeImageUrl(contenu.histoire_accueil_image || "/images/atelier-heritage.jpg")}
                     alt="Atelier patrimonial NADIRA — transmission du savoir-faire"
                     loading="lazy"
                     className="w-full aspect-[4/5] object-cover"

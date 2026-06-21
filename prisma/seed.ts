@@ -38,7 +38,7 @@ async function main() {
 
   // ===== Artisans =====
   const artisans = [
-    { nom: "Fatima Zahra", specialite: "Broderie main", biographie: "Maître brodeuse depuis 32 ans, détentrice des points ancestraux de Fès et de la rbati.", photo: "", ordre: 1 },
+    { nom: "Fatima Zahra", specialite: "Broderie main", biographie: "Maître brodeuse depuis 32 ans, détentrice des points ancestraux de Agadir et de la rbati.", photo: "", ordre: 1 },
     { nom: "Khadija El Amrani", specialite: "Coupe & assemblage", biographie: "Formée à l'École des Arts Traditionnels, Khadija sublime les caftans modernes.", photo: "", ordre: 2 },
     { nom: "Hajja Rachida", specialite: "Finitions & passementerie", biographie: "La main dorée de l'atelier — ses ourlets invisibles et ses boutons tissés sont légendaires.", photo: "", ordre: 3 },
     { nom: "Salma Benkirane", specialite: "Takchita & sfifa", biographie: "La jeune garde. Salma marie la sfifa traditionnelle aux coupes contemporaines.", photo: "", ordre: 4 },
@@ -89,10 +89,10 @@ async function main() {
       artisans: [2, 4],
     },
     {
-      nom: "Djellaba Brodée Fès",
+      nom: "Djellaba Brodée Agadir",
       slug: "djellaba-brodee-fes",
       description:
-        "Djellaba en lin écru, broderie Fès au point de chaînette sur capuche et poignets. Élégance discrète du quotidien, façonnée à la main dans la pure tradition.",
+        "Djellaba en lin écru, broderie Agadir au point de chaînette sur capuche et poignets. Élégance discrète du quotidien, façonnée à la main dans la pure tradition.",
       idCategorie: catMap["djellabas"],
       prix: 3200,
       tissu: "Lin",
@@ -245,10 +245,10 @@ async function main() {
 
   // ===== Contenu éditorial =====
   const contenus = [
-    { cle: "histoire_texte", valeur: "Née à Fès au cœur de la médina, la maison NADIRA perpétue depuis trois générations l'art ancestral de la couture marocaine. Chaque pièce est une conversation entre la brodeuse et le tissu, entre le geste transmis et l'inspiration du moment. Nos caftans et takchitas ne sont pas des vêtements : ce sont des héritages que l'on porte." },
+    { cle: "histoire_texte", valeur: "Née à Agadir au cœur de Quartier Salam, la maison NADIRA perpétue depuis trois générations l'art ancestral de la couture marocaine. Chaque pièce est une conversation entre la brodeuse et le tissu, entre le geste transmis et l'inspiration du moment. Nos caftans et takchitas ne sont pas des vêtements : ce sont des héritages que l'on porte." },
     { cle: "histoire_accroche", valeur: "Trois générations de mains qui brodent l'âme du Maroc." },
     { cle: "hero_accroche", valeur: "L'art de la couture marocaine, façonné pour vous." },
-    { cle: "atelier_texte", valeur: "Dans notre atelier de Fès, douze artisans perpétuent chaque jour des gestes vieux de plusieurs siècles. Le point de Fès, la sfifa, l'aakad, le rabat — autant de techniques que nous préservons et transmettons aux jeunes générations. La broderie main reste notre signature : un caftan peut demander jusqu'à 200 heures de travail." },
+    { cle: "atelier_texte", valeur: "Dans notre atelier de Agadir, douze artisans perpétuent chaque jour des gestes vieux de plusieurs siècles. Le point de Agadir, la sfifa, l'aakad, le rabat — autant de techniques que nous préservons et transmettons aux jeunes générations. La broderie main reste notre signature : un caftan peut demander jusqu'à 200 heures de travail." },
     { cle: "contact_adresse", valeur: "Quartier Salam, Agadir" },
     { cle: "contact_maps", valeur: "https://maps.apple/p/osTsur6u9BnDAr" },
     { cle: "contact_email", valeur: "couture.nadira2026@gmail.com" },
@@ -286,7 +286,7 @@ async function main() {
   const avis = [
     { note: 5, commentaire: "Un caftan d'une beauté à couper le souffle. La broderie est d'une finesse incroyable, on sent le travail d'artiste. Nadira a su comprendre exactement ce que je souhaitais.", nomAuteur: "Leïla M." },
     { note: 5, commentaire: "Ma takchita de mariage a fait l'unanimité. Le sur-mesure était parfait, les mesures prises avec soin. Une maison qui respecte ses clients et son savoir-faire.", nomAuteur: "Sara B." },
-    { note: 5, commentaire: "J'ai commandé une djellaba brodée Fès. La qualité du lin et de la broderie dépasse tout ce que j'ai vu. Service irréprochable, livraison soignée.", nomAuteur: "Yasmine T." },
+    { note: 5, commentaire: "J'ai commandé une djellaba brodée Agadir. La qualité du lin et de la broderie dépasse tout ce que j'ai vu. Service irréprochable, livraison soignée.", nomAuteur: "Yasmine T." },
     { note: 5, commentaire: "L'accueil à l'atelier est chaleureux, on se sent en famille. Les artisans sont passionnés et ça se voit dans chaque couture. Je recommande les yeux fermés.", nomAuteur: "Nadia E." },
     { note: 5, commentaire: "Trois générations de savoir-faire, et ça se ressent. Ma pièce est un héritage que je transmettrai à ma fille. Merci Nadira.", nomAuteur: "Fatima R." },
   ];

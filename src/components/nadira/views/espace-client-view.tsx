@@ -756,7 +756,7 @@ function HelpSection({ atelierTel, atelierWhatsapp }: { atelierTel: string; atel
         <div className="mt-12 flex items-center justify-center gap-2 text-gold-light/70">
           <KhatimStar className="h-3 w-3" />
           <span className="text-[11px] uppercase tracking-[0.3em]">
-            NADIRA Couture · Atelier de Fès
+            NADIRA Couture · Atelier de Agadir
           </span>
           <KhatimStar className="h-3 w-3" />
         </div>
