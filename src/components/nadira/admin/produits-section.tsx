@@ -662,18 +662,11 @@ function ProduitFormDialog({
                   ))}
               </div>
             )}
-            {/* Manual URL input (advanced) */}
-            <details className="mt-2">
-              <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
-                Ou saisir les URLs manuellement
-              </summary>
-              <Input
-                value={form.photos}
-                onChange={(e) => setForm({ ...form, photos: e.target.value })}
-                placeholder="/images/caftan-1.jpg,/images/caftan-2.jpg"
-                className="mt-2"
-              />
-            </details>
+            {!form.photos && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Aucune photo pour l'instant. Cliquez sur « Téléverser des images » pour ajouter des photos depuis votre appareil.
+              </p>
+            )}
           </div>
           <div className="md:col-span-2 flex items-center gap-3">
             <Switch
