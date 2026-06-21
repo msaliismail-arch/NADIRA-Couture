@@ -81,6 +81,16 @@ const CHIFFRES = [
 export function HistoireView({ contenu }: { contenu: Record<string, string> }) {
   const { setView } = useStore();
 
+  // Chapter content — uses editable contenu values with fallback defaults
+  const ch1Titre = contenu.histoire_ch1_titre || "Née dans la médina de Fès";
+  const ch1Image = contenu.histoire_ch1_image || "/images/atelier-heritage.jpg";
+  const ch2Titre = contenu.histoire_ch2_titre || "Vingt ans pour un point";
+  const ch2Texte = contenu.histoire_ch2_texte || PARAGRAPHE_TRANSMISSION;
+  const ch2Image = contenu.histoire_ch2_image || "/images/artisan-1.jpg";
+  const ch3Titre = contenu.histoire_ch3_titre || "L'architecture d'une pièce";
+  const ch3Texte = contenu.histoire_ch3_texte || `${PARAGRAPHE_FES}\n\n${PARAGRAPHE_SAVOIR_FAIRE}`;
+  const ch3Image = contenu.histoire_ch3_image || "/images/artisan-3.jpg";
+
   return (
     <div>
       {/* ============================================================ */}
@@ -121,8 +131,8 @@ export function HistoireView({ contenu }: { contenu: Record<string, string> }) {
                 <div className="absolute -inset-2 border border-gold/30 rounded-sm" />
                 <div className="relative overflow-hidden rounded-sm">
                   <img
-                    src="/images/atelier-heritage.jpg"
-                    alt="Atelier patrimonial NADIRA dans la médina de Fès"
+                    src={ch1Image}
+                    alt={ch1Titre}
                     loading="lazy"
                     className="w-full aspect-[4/5] object-cover"
                   />
@@ -139,9 +149,9 @@ export function HistoireView({ contenu }: { contenu: Record<string, string> }) {
                 Chapitre I · Fès, médina
               </p>
               <h2 className="font-display text-3xl sm:text-4xl text-emerald-deep mb-5 leading-tight">
-                Née dans la médina de Fès
+                {ch1Titre}
               </h2>
-              <p className="text-emerald/80 leading-relaxed text-lg">
+              <p className="text-emerald/80 leading-relaxed text-lg whitespace-pre-line">
                 {contenu.histoire_texte}
               </p>
             </Reveal>
@@ -156,10 +166,10 @@ export function HistoireView({ contenu }: { contenu: Record<string, string> }) {
                 Chapitre II · La transmission
               </p>
               <h2 className="font-display text-3xl sm:text-4xl text-emerald-deep mb-5 leading-tight">
-                Vingt ans pour un point
+                {ch2Titre}
               </h2>
-              <p className="text-emerald/80 leading-relaxed text-lg">
-                {PARAGRAPHE_TRANSMISSION}
+              <p className="text-emerald/80 leading-relaxed text-lg whitespace-pre-line">
+                {ch2Texte}
               </p>
             </Reveal>
             <Reveal className="lg:order-2 order-1">
@@ -167,8 +177,8 @@ export function HistoireView({ contenu }: { contenu: Record<string, string> }) {
                 <div className="absolute -inset-2 border border-gold/30 rounded-sm" />
                 <div className="relative overflow-hidden rounded-sm">
                   <img
-                    src="/images/artisan-1.jpg"
-                    alt="Artisane brodeuse de NADIRA — gestes ancestraux"
+                    src={ch2Image}
+                    alt={ch2Titre}
                     loading="lazy"
                     className="w-full aspect-[4/5] object-cover"
                   />
@@ -191,8 +201,8 @@ export function HistoireView({ contenu }: { contenu: Record<string, string> }) {
                 <div className="absolute -inset-2 border border-gold/30 rounded-sm" />
                 <div className="relative overflow-hidden rounded-sm">
                   <img
-                    src="/images/artisan-3.jpg"
-                    alt="Finitions et passementerie dans l'atelier NADIRA"
+                    src={ch3Image}
+                    alt={ch3Titre}
                     loading="lazy"
                     className="w-full aspect-[4/5] object-cover"
                   />
@@ -209,13 +219,10 @@ export function HistoireView({ contenu }: { contenu: Record<string, string> }) {
                 Chapitre III · Savoir-faire
               </p>
               <h2 className="font-display text-3xl sm:text-4xl text-emerald-deep mb-5 leading-tight">
-                L&apos;architecture d&apos;une pièce
+                {ch3Titre}
               </h2>
-              <p className="text-emerald/80 leading-relaxed text-lg mb-5">
-                {PARAGRAPHE_FES}
-              </p>
-              <p className="text-emerald/80 leading-relaxed text-lg">
-                {PARAGRAPHE_SAVOIR_FAIRE}
+              <p className="text-emerald/80 leading-relaxed text-lg whitespace-pre-line">
+                {ch3Texte}
               </p>
             </Reveal>
           </div>

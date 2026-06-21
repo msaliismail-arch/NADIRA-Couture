@@ -52,7 +52,7 @@ import {
 } from "@/components/ui/table";
 
 // lucide
-import { Plus, Edit, Trash2, Search, Upload, X } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Upload, X, ImageIcon } from "lucide-react";
 
 // sonner
 import { toast } from "sonner";
@@ -612,7 +612,6 @@ function ProduitFormDialog({
                   type="file"
                   accept="image/*"
                   multiple
-                  capture="environment"
                   className="hidden"
                   onChange={(e) => {
                     handleFileUpload(e.target.files);
@@ -634,27 +633,20 @@ function ProduitFormDialog({
                   .filter(Boolean)
                   .map((url, i) => (
                     <div
-                      key={i}
-                      className="relative w-20 h-20 rounded-md overflow-hidden border border-border group"
+                      key={url}
+                      className="relative w-20 h-20 rounded-md overflow-hidden border border-border group bg-muted"
                     >
-                      <img
-                        src={url}
-                        alt={`Photo ${i + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLImageElement).style.opacity = "0.2";
-                        }}
-                      />
+                      <PhotoPreview key={url} url={url} index={i} />
                       <button
                         type="button"
                         onClick={() => removePhoto(i)}
-                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-destructive text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-10"
                         aria-label="Supprimer cette photo"
                       >
                         <X className="w-3 h-3" />
                       </button>
                       {i === 0 && (
-                        <span className="absolute bottom-0 left-0 right-0 bg-emerald-deep/80 text-ivory text-[8px] text-center py-0.5">
+                        <span className="absolute bottom-0 left-0 right-0 bg-emerald-deep/80 text-ivory text-[8px] text-center py-0.5 z-10">
                           Couverture
                         </span>
                       )}
@@ -825,5 +817,37 @@ function ProduitFormDialog({
         </AlertDialog>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ============================================================
+   PhotoPreview — handles loading, error, and loaded states
+   for a single product photo thumbnail.
+============================================================ */
+function PhotoPreview({ url, index }: { url: string; index: number }) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  // Component is remounted via key={url} when URL changes, so initial state is always "loading"
+
+  return (
+    <>
+      {status === "loading" && (
+        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+          <div className="w-5 h-5 border-2 border-gold/30 border-t-gold rounded-full animate-spin" />
+        </div>
+      )}
+      {status === "error" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted text-muted-foreground p-1">
+          <ImageIcon className="w-5 h-5 mb-1" />
+          <span className="text-[7px] text-center leading-tight">Erreur</span>
+        </div>
+      )}
+      <img
+        src={url}
+        alt={`Photo ${index + 1}`}
+        className={`w-full h-full object-cover transition-opacity duration-200 ${status === "loaded" ? "opacity-100" : "opacity-0"}`}
+        onLoad={() => setStatus("loaded")}
+        onError={() => setStatus("error")}
+      />
+    </>
   );
 }
