@@ -5,7 +5,6 @@ import { useStore } from "@/lib/store";
 import { api, formatMAD, formatDate, normalizeImageUrl } from "@/lib/api";
 import type { Produit, Categorie, Artisan } from "@/lib/types";
 import { NadiraMonogram, GoldDivider, KhatimStar } from "@/components/nadira/brand";
-import { useReveal } from "@/hooks/use-reveal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -105,8 +104,6 @@ function ProduitViewInner({ slug }: { slug: string }) {
   const [qty, setQty] = useState(1);
   const [orderOpen, setOrderOpen] = useState(false);
 
-  const { ref: sectionRef, visible: sectionVisible } = useReveal<HTMLDivElement>();
-
   // Fetch product detail (initial mount only — keyed by slug)
   useEffect(() => {
     let cancelled = false;
@@ -183,10 +180,7 @@ function ProduitViewInner({ slug }: { slug: string }) {
         <>
           {/* Two-column layout */}
           <section
-            ref={sectionRef}
-            className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12 reveal ${
-              sectionVisible ? "in-view" : ""
-            }`}
+            className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 lg:py-12"
           >
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
               {/* LEFT — Gallery */}
@@ -754,6 +748,8 @@ type OrderForm = {
   prenom: string;
   telephone: string;
   email: string;
+  ville: string;
+  adresse: string;
   notes: string;
 };
 
@@ -779,6 +775,8 @@ function OrderDialog({
     prenom: "",
     telephone: "",
     email: "",
+    ville: "",
+    adresse: "",
     notes: "",
   });
   const [phoneError, setPhoneError] = useState<string | null>(null);
@@ -807,10 +805,19 @@ function OrderDialog({
     return null;
   };
 
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
   const goStep2 = () => {
-    const err = validatePhone(form.telephone);
-    setPhoneError(err);
-    if (err) return;
+    const errs: Record<string, string> = {};
+    const phoneErr = validatePhone(form.telephone);
+    if (phoneErr) errs.telephone = phoneErr;
+    if (!form.prenom.trim()) errs.prenom = "Le prénom est requis";
+    if (!form.nom.trim()) errs.nom = "Le nom est requis";
+    if (!form.ville.trim()) errs.ville = "La ville est requise";
+    if (!form.adresse.trim()) errs.adresse = "L'adresse est requise";
+    setFieldErrors(errs);
+    setPhoneError(phoneErr);
+    if (Object.keys(errs).length > 0) return;
     setStep(2);
   };
 
@@ -823,6 +830,8 @@ function OrderDialog({
         prenom: form.prenom,
         telephone: form.telephone,
         email: form.email || undefined,
+        ville: form.ville || undefined,
+        adresse: form.adresse || undefined,
         notes: form.notes || undefined,
         lignes: [
           {
@@ -891,21 +900,43 @@ function OrderDialog({
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Prénom">
+                <Field label="Prénom" required>
                   <Input
                     value={form.prenom}
-                    onChange={(e) => setField("prenom", e.target.value)}
+                    onChange={(e) => {
+                      setField("prenom", e.target.value);
+                      if (fieldErrors.prenom)
+                        setFieldErrors((f) => ({ ...f, prenom: "" }));
+                    }}
                     placeholder="Votre prénom"
-                    className="bg-card/60 border-gold/30"
+                    className={`bg-card/60 ${
+                      fieldErrors.prenom ? "border-destructive" : "border-gold/30"
+                    }`}
                   />
+                  {fieldErrors.prenom && (
+                    <p className="text-xs text-destructive mt-1">
+                      {fieldErrors.prenom}
+                    </p>
+                  )}
                 </Field>
-                <Field label="Nom">
+                <Field label="Nom" required>
                   <Input
                     value={form.nom}
-                    onChange={(e) => setField("nom", e.target.value)}
+                    onChange={(e) => {
+                      setField("nom", e.target.value);
+                      if (fieldErrors.nom)
+                        setFieldErrors((f) => ({ ...f, nom: "" }));
+                    }}
                     placeholder="Votre nom"
-                    className="bg-card/60 border-gold/30"
+                    className={`bg-card/60 ${
+                      fieldErrors.nom ? "border-destructive" : "border-gold/30"
+                    }`}
                   />
+                  {fieldErrors.nom && (
+                    <p className="text-xs text-destructive mt-1">
+                      {fieldErrors.nom}
+                    </p>
+                  )}
                 </Field>
               </div>
               <Field label="Téléphone" required>
@@ -925,6 +956,44 @@ function OrderDialog({
                 />
                 {phoneError && (
                   <p className="text-xs text-destructive mt-1">{phoneError}</p>
+                )}
+              </Field>
+              <Field label="Ville" required>
+                <Input
+                  value={form.ville}
+                  onChange={(e) => {
+                    setField("ville", e.target.value);
+                    if (fieldErrors.ville)
+                      setFieldErrors((f) => ({ ...f, ville: "" }));
+                  }}
+                  placeholder="Agadir"
+                  className={`bg-card/60 ${
+                    fieldErrors.ville ? "border-destructive" : "border-gold/30"
+                  }`}
+                />
+                {fieldErrors.ville && (
+                  <p className="text-xs text-destructive mt-1">
+                    {fieldErrors.ville}
+                  </p>
+                )}
+              </Field>
+              <Field label="Adresse" required>
+                <Input
+                  value={form.adresse}
+                  onChange={(e) => {
+                    setField("adresse", e.target.value);
+                    if (fieldErrors.adresse)
+                      setFieldErrors((f) => ({ ...f, adresse: "" }));
+                  }}
+                  placeholder="Quartier, rue, n°..."
+                  className={`bg-card/60 ${
+                    fieldErrors.adresse ? "border-destructive" : "border-gold/30"
+                  }`}
+                />
+                {fieldErrors.adresse && (
+                  <p className="text-xs text-destructive mt-1">
+                    {fieldErrors.adresse}
+                  </p>
                 )}
               </Field>
             </div>

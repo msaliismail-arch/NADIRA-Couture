@@ -21,6 +21,7 @@ export type AdminSection =
   | "mesures"
   | "avis"
   | "galerie"
+  | "categories"
   | "contenu"
   | "artisans";
 

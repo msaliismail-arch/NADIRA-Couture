@@ -60,6 +60,7 @@ export async function POST(req: NextRequest) {
       prenom,
       telephone,
       email,
+      ville,
       adresse,
       lignes,
       mesures,
@@ -70,6 +71,7 @@ export async function POST(req: NextRequest) {
       prenom?: string;
       telephone?: string;
       email?: string;
+      ville?: string;
       adresse?: string;
       lignes?: {
         idProduit: number;
@@ -108,6 +110,7 @@ export async function POST(req: NextRequest) {
           prenom,
           telephone,
           email: email || null,
+          ville: ville || null,
           adresse: adresse || null,
         },
       });
@@ -117,6 +120,7 @@ export async function POST(req: NextRequest) {
         where: { id: client.id },
         data: {
           email: client.email || email || null,
+          ville: client.ville || ville || null,
           adresse: client.adresse || adresse || null,
         },
       });

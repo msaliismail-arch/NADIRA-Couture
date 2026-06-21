@@ -54,6 +54,7 @@ import { RendezvousSection } from "@/components/nadira/admin/rendezvous-section"
 import { MesuresSection } from "@/components/nadira/admin/mesures-section";
 import { AvisSection } from "@/components/nadira/admin/avis-section";
 import { GalerieSection } from "@/components/nadira/admin/galerie-section";
+import { CategoriesSection } from "@/components/nadira/admin/categories-section";
 import { ArtisansSection } from "@/components/nadira/admin/artisans-section";
 import { ContenuSection } from "@/components/nadira/admin/contenu-section";
 
@@ -276,6 +277,7 @@ function AdminDashboard() {
           {adminSection === "mesures" && <MesuresSection />}
           {adminSection === "avis" && <AvisSection />}
           {adminSection === "galerie" && <GalerieSection />}
+          {adminSection === "categories" && <CategoriesSection />}
           {adminSection === "artisans" && <ArtisansSection />}
           {adminSection === "contenu" && <ContenuSection />}
         </main>

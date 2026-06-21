@@ -87,6 +87,7 @@ model Client {
   prenom          String
   email           String?       // optionnel — la maison contacte par téléphone
   telephone       String
+  ville           String?
   adresse         String?
   dateInscription DateTime      @default(now())
   commandes       Commande[]

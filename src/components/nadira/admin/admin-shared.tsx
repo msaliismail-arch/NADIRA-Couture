@@ -25,6 +25,7 @@ import {
   FileText,
   Users,
   Images,
+  FolderOpen,
 } from "lucide-react";
 
 // Re-export for convenience so sections only need a single import source.
@@ -103,6 +104,7 @@ export const NAV_ITEMS: {
   { key: "mesures", label: "Mesures", icon: Ruler },
   { key: "avis", label: "Avis", icon: Star },
   { key: "galerie", label: "Galerie", icon: Images },
+  { key: "categories", label: "Catégories", icon: FolderOpen },
   { key: "artisans", label: "Artisans", icon: Users },
   { key: "contenu", label: "Contenu", icon: FileText },
 ];
