@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { randomUUID } from "crypto";
+import { createClient } from "@supabase/supabase-js";
+
+// إنشاء الاتصال مع Supabase باستخدام المفاتيح السرية
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,8 +15,10 @@ export async function POST(req: NextRequest) {
     if (!admin) {
       return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     }
+    
     const formData = await req.formData();
     const file = formData.get("file");
+    
     if (!file || !(file instanceof File)) {
       return NextResponse.json({ error: "Aucun fichier" }, { status: 400 });
     }
@@ -45,12 +52,26 @@ export async function POST(req: NextRequest) {
     // Generate a unique filename preserving extension
     const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
     const filename = `${randomUUID()}.${ext}`;
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await mkdir(uploadDir, { recursive: true });
-    const filepath = path.join(uploadDir, filename);
-    await writeFile(filepath, buffer);
 
-    return NextResponse.json({ url: `/api/uploads/${filename}` });
+    // رفع الصورة إلى Supabase Storage (فـ Bucket سميتو uploads)
+    const { error } = await supabase.storage
+      .from("uploads")
+      .upload(filename, buffer, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type,
+      });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // استرجاع الرابط العام (Public URL) ديال الصورة
+    const { data } = supabase.storage.from("uploads").getPublicUrl(filename);
+
+    // إرجاع الرابط للـ Frontend
+    return NextResponse.json({ url: data.publicUrl });
+    
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Erreur serveur" },
