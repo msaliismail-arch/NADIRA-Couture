@@ -8,6 +8,17 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Contenu } from "@/lib/types";
 import { normalizeImageUrl } from "@/lib/api";
+import {
+  SOCIAL_KEYS,
+  SOCIAL_CONTENT_KEY,
+  SOCIAL_KEYS_CONTENU,
+  SOCIAL_LABEL,
+  SOCIAL_PLACEHOLDER,
+  SOCIAL_HINT,
+  normalizeSocialUrl,
+} from "@/lib/socials";
+import { SOCIAL_ICON } from "@/components/nadira/social-icons";
+import { ADRESSE_ATELIER, mapsUrl } from "@/lib/maps";
 
 // shadcn/ui
 import { Button } from "@/components/ui/button";
@@ -18,7 +29,18 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // lucide
-import { Save, Upload, X, BookOpen, ImageIcon } from "lucide-react";
+import {
+  Save,
+  Upload,
+  X,
+  BookOpen,
+  ImageIcon,
+  Share2,
+  ExternalLink,
+  MapPin,
+  Mail,
+  Phone,
+} from "lucide-react";
 
 // sonner
 import { toast } from "sonner";
@@ -43,13 +65,29 @@ const CONTENU_LABELS: Record<string, string> = {
   histoire_accueil_image: "Accueil — Photo section Notre Histoire",
   atelier_texte: "Atelier — Texte",
   contact_adresse: "Contact — Adresse",
-  contact_maps: "Contact — Lien Apple Maps",
+  contact_maps: "Contact — Lien carte",
   contact_email: "Contact — Email",
+  contact_telephone: "Contact — Téléphone",
   contact_horaires: "Contact — Horaires",
   citation_1: "Citation #1",
   citation_2: "Citation #2",
   reseaux_instagram: "Réseaux — Instagram",
+  reseaux_tiktok: "Réseaux — TikTok",
+  reseaux_facebook: "Réseaux — Facebook",
+  reseaux_whatsapp: "Réseaux — WhatsApp",
 };
+
+/** Clés gérées par l'éditeur dédié « Réseaux sociaux ». */
+const RESEAUX_KEYS = SOCIAL_KEYS_CONTENU;
+
+/** Clés gérées par l'éditeur dédié « Coordonnées de la maison ». */
+const COORDONNEES_KEYS = [
+  "contact_adresse",
+  "contact_maps",
+  "contact_email",
+  "contact_telephone",
+  "contact_horaires",
+];
 
 // Content keys that belong to the "Notre Histoire" editor
 const HISTOIRE_KEYS = [
@@ -119,6 +157,10 @@ export function ContenuSection() {
   for (const k of HISTOIRE_KEYS) {
     if (!(k in contenuMap)) contenuMap[k] = "";
   }
+  // Same for the social network + contact keys
+  for (const k of [...RESEAUX_KEYS, ...COORDONNEES_KEYS]) {
+    if (!(k in contenuMap)) contenuMap[k] = "";
+  }
 
   async function saveKey(cle: string) {
     const valeur = contenuMap[cle] ?? "";
@@ -157,6 +199,54 @@ export function ContenuSection() {
       setEdits((e) => {
         const n = { ...e };
         for (const k of HISTOIRE_KEYS) delete n[k];
+        return n;
+      });
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function saveAllReseaux() {
+    setSaving("reseaux_all");
+    try {
+      for (const key of RESEAUX_KEYS) {
+        const valeur = (contenuMap[key] ?? "").trim();
+        await adminApi("/api/contenu", {
+          method: "PUT",
+          body: JSON.stringify({ cle: key, valeur }),
+        });
+      }
+      toast.success("Réseaux sociaux mis à jour");
+      setEdits((e) => {
+        const n = { ...e };
+        for (const k of RESEAUX_KEYS) delete n[k];
+        return n;
+      });
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function saveAllCoordonnees() {
+    setSaving("coordonnees_all");
+    try {
+      for (const key of COORDONNEES_KEYS) {
+        const valeur = (contenuMap[key] ?? "").trim();
+        await adminApi("/api/contenu", {
+          method: "PUT",
+          body: JSON.stringify({ cle: key, valeur }),
+        });
+      }
+      toast.success("Coordonnées mises à jour");
+      setEdits((e) => {
+        const n = { ...e };
+        for (const k of COORDONNEES_KEYS) delete n[k];
         return n;
       });
       load();
@@ -208,9 +298,22 @@ export function ContenuSection() {
     (k) => edits[k] !== undefined && edits[k] !== (contenus.find((c) => c.cle === k)?.valeur ?? "")
   );
 
-  // Split contenus: histoire keys are shown in the dedicated editor,
-  // the rest in the general editor below
-  const generalContenus = contenus.filter((c) => !HISTOIRE_KEYS.includes(c.cle));
+  const reseauxDirty = RESEAUX_KEYS.some(
+    (k) => edits[k] !== undefined && edits[k] !== (contenus.find((c) => c.cle === k)?.valeur ?? "")
+  );
+
+  const coordonneesDirty = COORDONNEES_KEYS.some(
+    (k) => edits[k] !== undefined && edits[k] !== (contenus.find((c) => c.cle === k)?.valeur ?? "")
+  );
+
+  // Split contenus: histoire, réseaux and coordonnées keys are shown in
+  // dedicated editors, the rest in the general editor below
+  const generalContenus = contenus.filter(
+    (c) =>
+      !HISTOIRE_KEYS.includes(c.cle) &&
+      !RESEAUX_KEYS.includes(c.cle) &&
+      !COORDONNEES_KEYS.includes(c.cle)
+  );
 
   return (
     <div className="space-y-6">
@@ -352,6 +455,202 @@ export function ContenuSection() {
             </div>
           </Card>
 
+          {/* ====== Coordonnées de la maison ====== */}
+          <Card className="p-5 border-2 border-gold/30">
+            <div className="flex items-center gap-2 mb-4">
+              <MapPin className="w-5 h-5 text-gold-deep" />
+              <h2 className="font-display text-xl text-emerald-deep">
+                Coordonnées de la maison
+              </h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Adresse, carte, e-mail, téléphone et horaires affichés sur le site
+              (page Contact, bas de page, espace client). L&apos;adresse est
+              cliquable sur le site et ouvre la carte.
+            </p>
+
+            <div className="space-y-4">
+              {/* Adresse + lien carte */}
+              <div className="rounded-lg border border-border p-4 space-y-3 bg-muted/20">
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-gold-deep">
+                    Adresse de l&apos;atelier
+                  </Label>
+                  <Input
+                    value={contenuMap.contact_adresse ?? ""}
+                    placeholder={ADRESSE_ATELIER}
+                    onChange={(e) =>
+                      setEdits({ ...edits, contact_adresse: e.target.value })
+                    }
+                  />
+                  <p className="text-[11px] text-muted-foreground">
+                    Affichée sur la carte de la page Contact, dans le bas de page
+                    et sur la page Sur-Mesure.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label className="text-xs uppercase tracking-wider text-gold-deep">
+                    Lien de la carte (facultatif)
+                  </Label>
+                  <Input
+                    value={contenuMap.contact_maps ?? ""}
+                    placeholder="Laissez vide : le lien Google Maps est généré depuis l'adresse"
+                    onChange={(e) =>
+                      setEdits({ ...edits, contact_maps: e.target.value })
+                    }
+                  />
+                  <a
+                    href={
+                      (contenuMap.contact_maps ?? "").trim() ||
+                      mapsUrl(contenuMap.contact_adresse ?? "")
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-gold-deep hover:underline break-all"
+                  >
+                    <ExternalLink className="w-3 h-3 shrink-0" />
+                    Tester le lien de la carte
+                  </a>
+                </div>
+              </div>
+
+              {/* E-mail / téléphone / horaires */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <ContactField
+                  icon={Mail}
+                  label="E-mail"
+                  contentKey="contact_email"
+                  placeholder="couture.nadira2026@gmail.com"
+                  hint="Cliquable sur le site : ouvre la messagerie du visiteur."
+                  values={contenuMap}
+                  onEdit={(k, v) => setEdits({ ...edits, [k]: v })}
+                  preview={(v) => (v ? `mailto:${v}` : null)}
+                />
+                <ContactField
+                  icon={Phone}
+                  label="Téléphone"
+                  contentKey="contact_telephone"
+                  placeholder="+212 5 35 63 42 18"
+                  hint="Cliquable sur mobile : lance l'appel."
+                  values={contenuMap}
+                  onEdit={(k, v) => setEdits({ ...edits, [k]: v })}
+                  preview={(v) =>
+                    v ? `tel:${v.replace(/[^\d+]/g, "")}` : null
+                  }
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs uppercase tracking-wider text-gold-deep">
+                  Horaires d&apos;ouverture
+                </Label>
+                <Input
+                  value={contenuMap.contact_horaires ?? ""}
+                  placeholder="Tous les jours, toute l'année · 10h00–23h00"
+                  onChange={(e) =>
+                    setEdits({ ...edits, contact_horaires: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end mt-5">
+              <Button
+                className="bg-emerald hover:bg-emerald-deep text-ivory"
+                disabled={saving === "coordonnees_all" || !coordonneesDirty}
+                onClick={saveAllCoordonnees}
+              >
+                <Save className="w-4 h-4 mr-1" />
+                {saving === "coordonnees_all"
+                  ? "Enregistrement..."
+                  : "Enregistrer les coordonnées"}
+              </Button>
+            </div>
+          </Card>
+
+          {/* ====== Réseaux sociaux ====== */}
+          <Card className="p-5 border-2 border-gold/30">
+            <div className="flex items-center gap-2 mb-4">
+              <Share2 className="w-5 h-5 text-gold-deep" />
+              <h2 className="font-display text-xl text-emerald-deep">
+                Réseaux sociaux
+              </h2>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">
+              Renseignez ici les liens de vos réseaux. Les logos affichés sur le
+              site (bas de page et page Contact) deviennent automatiquement
+              cliquables et pointent vers l&apos;adresse saisie. Laissez un champ
+              vide pour masquer le logo correspondant.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {SOCIAL_KEYS.map((key) => {
+                const cle = SOCIAL_CONTENT_KEY[key];
+                const raw = contenuMap[cle] ?? "";
+                const href = normalizeSocialUrl(key, raw);
+                const Icon = SOCIAL_ICON[key];
+                return (
+                  <div
+                    key={key}
+                    className="rounded-lg border border-border p-4 space-y-2 bg-muted/20"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="h-8 w-8 shrink-0 rounded-full border border-gold/40 flex items-center justify-center text-emerald-deep">
+                        <Icon className="w-4 h-4" />
+                      </span>
+                      <Label className="text-sm font-medium text-emerald-deep">
+                        {SOCIAL_LABEL[key]}
+                      </Label>
+                    </div>
+                    <Input
+                      value={raw}
+                      placeholder={SOCIAL_PLACEHOLDER[key]}
+                      onChange={(e) =>
+                        setEdits({ ...edits, [cle]: e.target.value })
+                      }
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      {SOCIAL_HINT[key]}
+                    </p>
+                    {href ? (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] text-gold-deep hover:underline break-all"
+                      >
+                        <ExternalLink className="w-3 h-3 shrink-0" />
+                        {href}
+                      </a>
+                    ) : raw.trim() ? (
+                      <p className="text-[11px] text-destructive">
+                        Valeur non reconnue — vérifiez le lien.
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-muted-foreground italic">
+                        Non renseigné — le logo sera masqué sur le site.
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end mt-5">
+              <Button
+                className="bg-emerald hover:bg-emerald-deep text-ivory"
+                disabled={saving === "reseaux_all" || !reseauxDirty}
+                onClick={saveAllReseaux}
+              >
+                <Save className="w-4 h-4 mr-1" />
+                {saving === "reseaux_all"
+                  ? "Enregistrement..."
+                  : "Enregistrer les réseaux"}
+              </Button>
+            </div>
+          </Card>
+
           {/* ====== General Content Editor ====== */}
           <div className="space-y-3">
             <h2 className="font-display text-lg text-emerald-deep mt-6">
@@ -393,6 +692,62 @@ export function ContenuSection() {
             })}
           </div>
         </>
+      )}
+    </div>
+  );
+}
+
+/* ============================================================
+   ContactField — un champ de coordonnées avec aperçu du lien
+============================================================ */
+function ContactField({
+  icon: Icon,
+  label,
+  contentKey,
+  placeholder,
+  hint,
+  values,
+  onEdit,
+  preview,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  contentKey: string;
+  placeholder: string;
+  hint: string;
+  values: Record<string, string>;
+  onEdit: (key: string, value: string) => void;
+  preview: (value: string) => string | null;
+}) {
+  const value = (values[contentKey] ?? "").trim();
+  const href = preview(value);
+
+  return (
+    <div className="rounded-lg border border-border p-4 space-y-2 bg-muted/20">
+      <div className="flex items-center gap-2">
+        <span className="h-8 w-8 shrink-0 rounded-full border border-gold/40 flex items-center justify-center text-emerald-deep">
+          <Icon className="w-4 h-4" />
+        </span>
+        <Label className="text-sm font-medium text-emerald-deep">{label}</Label>
+      </div>
+      <Input
+        value={values[contentKey] ?? ""}
+        placeholder={placeholder}
+        onChange={(e) => onEdit(contentKey, e.target.value)}
+      />
+      <p className="text-[11px] text-muted-foreground">{hint}</p>
+      {href ? (
+        <a
+          href={href}
+          className="inline-flex items-center gap-1 text-[11px] text-gold-deep hover:underline break-all"
+        >
+          <ExternalLink className="w-3 h-3 shrink-0" />
+          {href}
+        </a>
+      ) : (
+        <p className="text-[11px] text-muted-foreground italic">
+          Non renseigné — masqué sur le site.
+        </p>
       )}
     </div>
   );

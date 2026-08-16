@@ -93,7 +93,7 @@ export function AtelierView({ contenu }: { contenu: Record<string, string> }) {
 
   const atelierTexte =
     contenu.atelier_texte ||
-    "Au cœur de Quartier Salam à Agadir, l'atelier NADIRA réunit douze artisans qui perpétuent des gestes transmis depuis trois générations. Chaque caftan exige près de deux cents heures de travail, partagées entre la coupe, la broderie main, la sfifa, l'aakad et les finitions.";
+    "Au 26 rue Iligh à Agadir, l'atelier NADIRA réunit douze artisans qui perpétuent des gestes transmis depuis trois générations. Chaque caftan exige près de deux cents heures de travail, partagées entre la coupe, la broderie main, la sfifa, l'aakad et les finitions.";
 
   const citation = contenu.citation_2 ||
     "« Le fil retient ce que la parole oublie. »";

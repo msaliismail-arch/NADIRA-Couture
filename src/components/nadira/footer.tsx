@@ -2,10 +2,15 @@
 
 import { useStore } from "@/lib/store";
 import { NadiraMedallion, GoldDivider, KhatimStar } from "./brand";
-import { Instagram, Mail, MapPin } from "lucide-react";
+import { SOCIAL_ICON } from "./social-icons";
+import { getSocialLinks } from "@/lib/socials";
+import { getAdresse } from "@/lib/maps";
+import { Mail, MapPin } from "lucide-react";
 
 export function Footer({ contenu }: { contenu: Record<string, string> }) {
   const { setView } = useStore();
+  const socials = getSocialLinks(contenu);
+  const { adresse, mapsLink } = getAdresse(contenu);
 
   return (
     <footer className="relative velvet-deep text-ivory overflow-hidden mt-auto">
@@ -63,18 +68,15 @@ export function Footer({ contenu }: { contenu: Record<string, string> }) {
             <ul className="space-y-3 text-sm text-ivory/75">
               <li className="flex gap-2.5">
                 <MapPin className="h-4 w-4 text-gold mt-0.5 shrink-0" />
-                {contenu.contact_maps ? (
-                  <a
-                    href={contenu.contact_maps}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="hover:text-gold-light transition-colors"
-                  >
-                    {contenu.contact_adresse}
-                  </a>
-                ) : (
-                  <span>{contenu.contact_adresse}</span>
-                )}
+                <a
+                  href={mapsLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={`Ouvrir « ${adresse} » dans Google Maps`}
+                  className="hover:text-gold-light transition-colors underline decoration-gold/30 decoration-1 underline-offset-4 hover:decoration-gold"
+                >
+                  {adresse}
+                </a>
               </li>
               <li className="flex gap-2.5">
                 <Mail className="h-4 w-4 text-gold mt-0.5 shrink-0" />
@@ -82,17 +84,23 @@ export function Footer({ contenu }: { contenu: Record<string, string> }) {
                   {contenu.contact_email}
                 </a>
               </li>
-              <li className="flex gap-2.5">
-                <Instagram className="h-4 w-4 text-gold mt-0.5 shrink-0" />
-                <a
-                  href={contenu.reseaux_instagram}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-gold-light transition-colors"
-                >
-                  @couture_nadira
-                </a>
-              </li>
+              {socials.map((s) => {
+                const Icon = SOCIAL_ICON[s.key];
+                return (
+                  <li key={s.key} className="flex gap-2.5">
+                    <Icon className="h-4 w-4 text-gold mt-0.5 shrink-0" />
+                    <a
+                      href={s.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={s.label}
+                      className="hover:text-gold-light transition-colors break-all"
+                    >
+                      {s.display}
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
           </div>
 
@@ -102,17 +110,26 @@ export function Footer({ contenu }: { contenu: Record<string, string> }) {
               <KhatimStar className="h-3 w-3" /> Atelier
             </h3>
             <p className="text-sm text-ivory/75 leading-relaxed">{contenu.contact_horaires}</p>
-            <div className="mt-4 flex gap-3">
-              <a
-                href={contenu.reseaux_instagram}
-                target="_blank"
-                rel="noreferrer"
-                className="h-9 w-9 rounded-full border border-gold/30 flex items-center justify-center text-gold-light hover:bg-gold/15 transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-4 w-4" />
-              </a>
-            </div>
+            {socials.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-3">
+                {socials.map((s) => {
+                  const Icon = SOCIAL_ICON[s.key];
+                  return (
+                    <a
+                      key={s.key}
+                      href={s.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="h-9 w-9 rounded-full border border-gold/30 flex items-center justify-center text-gold-light hover:bg-gold/15 hover:border-gold/60 transition-colors"
+                      aria-label={s.label}
+                      title={s.label}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Newsletter / admin */}

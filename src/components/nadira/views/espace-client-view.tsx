@@ -850,7 +850,12 @@ export function EspaceClientView() {
   }, [clientCommandeRef, searchCommande, setClientCommandeRef]);
 
   const atelierTel = contenu.contact_telephone || "+212 5 35 63 42 18";
-  const atelierWhatsapp = contenu.contact_whatsapp || "+212 6 61 23 45 67";
+  // WhatsApp : géré depuis Admin -> Contenu -> Réseaux sociaux
+  const atelierWhatsapp =
+    contenu.reseaux_whatsapp ||
+    contenu.contact_whatsapp ||
+    contenu.contact_telephone ||
+    "+212 6 61 23 45 67";
 
   const nothingSearched =
     !commande &&

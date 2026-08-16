@@ -74,12 +74,14 @@ export async function PUT(req: NextRequest, { params }: Params) {
       stock?: number;
       photos?: string;
       artisanIds?: number[];
-      longueur?: number | null;
-      largeur?: number | null;
-      tourPoitrine?: number | null;
-      tourTaille?: number | null;
-      tourHanches?: number | null;
-      longueurManche?: number | null;
+      // Les champs de dimensions arrivent du formulaire admin : ils peuvent
+      // valoir "" (champ laissé vide) aussi bien qu'un nombre.
+      longueur?: number | string | null;
+      largeur?: number | string | null;
+      tourPoitrine?: number | string | null;
+      tourTaille?: number | string | null;
+      tourHanches?: number | string | null;
+      longueurManche?: number | string | null;
       autreDimensions?: string | null;
       datePiece?: string | null;
     };

@@ -5,7 +5,6 @@ import {
   Mail,
   MapPin,
   Clock,
-  Instagram,
   Phone,
   Check,
   ArrowRight,
@@ -19,6 +18,9 @@ import {
   KhatimStar,
   GoldDivider,
 } from "@/components/nadira/brand";
+import { SOCIAL_ICON } from "@/components/nadira/social-icons";
+import { getSocialLinks, type SocialLink } from "@/lib/socials";
+import { getAdresse } from "@/lib/maps";
 import { useReveal } from "@/hooks/use-reveal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,11 +44,16 @@ function isValidPhone(tel: string) {
 export function ContactView({ contenu }: { contenu: Record<string, string> }) {
   const { setView } = useStore();
 
-  const adresse = contenu.contact_adresse || "Quartier Salam, Agadir";
   const email = contenu.contact_email || "couture.nadira2026@gmail.com";
   const horaires = contenu.contact_horaires || "Tous les jours, toute l'année · 10h00–23h00";
-  const instagram = contenu.reseaux_instagram || "https://www.instagram.com/couture_nadira?igsh=bjZneDIzMGVudHBn";
-  const mapsLink = contenu.contact_maps || "https://maps.apple/p/osTsur6u9BnDAr";
+  // Adresse de l'atelier + lien carte (généré si non renseigné en admin)
+  const { adresse, mapsLink } = getAdresse(contenu);
+  // Réseaux sociaux gérés depuis Admin → Contenu → Réseaux sociaux
+  const socials = getSocialLinks({
+    reseaux_instagram:
+      "https://www.instagram.com/couture_nadira?igsh=bjZneDIzMGVudHBn",
+    ...contenu,
+  });
 
   // Form state
   const [nom, setNom] = useState("");
@@ -117,7 +124,7 @@ export function ContactView({ contenu }: { contenu: Record<string, string> }) {
             adresse={adresse}
             email={email}
             horaires={horaires}
-            instagram={instagram}
+            socials={socials}
             mapsLink={mapsLink}
             mailLink={mailLink}
           />
@@ -195,12 +202,12 @@ function Hero() {
 /* ============== CONTACT INFO ============== */
 function ContactInfo({
   adresse, email, horaires,
-  instagram, mapsLink, mailLink,
+  socials, mapsLink, mailLink,
 }: {
   adresse: string;
   email: string;
   horaires: string;
-  instagram: string;
+  socials: SocialLink[];
   mapsLink: string;
   mailLink: string;
 }) {
@@ -218,7 +225,15 @@ function ContactInfo({
       <div className="space-y-4">
         <InfoRow icon={MapPin} label="Adresse" value={adresse} href={mapsLink} />
         <InfoRow icon={Mail} label="E-mail" value={email} href={mailLink} />
-        <InfoRow icon={Instagram} label="Instagram" value="@couture_nadira" href={instagram} />
+        {socials.map((s) => (
+          <InfoRow
+            key={s.key}
+            icon={SOCIAL_ICON[s.key]}
+            label={s.label}
+            value={s.display}
+            href={s.href}
+          />
+        ))}
         <InfoRow icon={Clock} label="Horaires" value={horaires} />
       </div>
 
@@ -228,11 +243,21 @@ function ContactInfo({
             <MapPin className="h-4 w-4" /> Voir sur la carte
           </a>
         </Button>
-        <Button asChild variant="outline" className="border-gold/40 text-emerald-deep hover:bg-gold/10">
-          <a href={instagram} target="_blank" rel="noreferrer">
-            <Instagram className="h-4 w-4" /> Instagram
-          </a>
-        </Button>
+        {socials.map((s) => {
+          const Icon = SOCIAL_ICON[s.key];
+          return (
+            <Button
+              key={s.key}
+              asChild
+              variant="outline"
+              className="border-gold/40 text-emerald-deep hover:bg-gold/10"
+            >
+              <a href={s.href} target="_blank" rel="noreferrer">
+                <Icon className="h-4 w-4" /> {s.label}
+              </a>
+            </Button>
+          );
+        })}
       </div>
 
       <Separator className="my-6 bg-gold/20" />
@@ -241,16 +266,23 @@ function ContactInfo({
         <p className="text-xs uppercase tracking-[0.25em] text-gold-deep mb-3">
           Suivez la maison
         </p>
-        <div className="flex gap-3">
-          <a
-            href={instagram}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Instagram"
-            className="h-11 w-11 rounded-full border border-gold/40 flex items-center justify-center text-emerald-deep hover:bg-gold/10 transition-colors"
-          >
-            <Instagram className="h-5 w-5" />
-          </a>
+        <div className="flex flex-wrap gap-3">
+          {socials.map((s) => {
+            const Icon = SOCIAL_ICON[s.key];
+            return (
+              <a
+                key={s.key}
+                href={s.href}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={s.label}
+                title={s.label}
+                className="h-11 w-11 rounded-full border border-gold/40 flex items-center justify-center text-emerald-deep hover:bg-gold/10 hover:border-gold/70 transition-colors"
+              >
+                <Icon className="h-5 w-5" />
+              </a>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -540,9 +572,15 @@ function MapCard({
               <p className="mt-4 text-xs uppercase tracking-[0.3em] text-gold-light/80">
                 Atelier NADIRA
               </p>
-              <p className="mt-2 font-serif-alt text-xl sm:text-2xl text-ivory italic max-w-md">
+              <a
+                href={mapsLink}
+                target="_blank"
+                rel="noreferrer"
+                title={`Ouvrir « ${adresse} » dans Google Maps`}
+                className="mt-2 font-serif-alt text-xl sm:text-2xl text-ivory italic max-w-md underline decoration-gold/50 decoration-1 underline-offset-4 hover:text-gold-light hover:decoration-gold transition-colors"
+              >
                 {adresse}
-              </p>
+              </a>
               <Button asChild className="mt-6 bg-gold text-emerald-deep hover:bg-gold-light">
                 <a href={mapsLink} target="_blank" rel="noreferrer">
                   <MapPin className="h-4 w-4" />

@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { ADRESSE_ATELIER } from "@/lib/maps";
 
 type MesureField =
   | "tourPoitrine"
@@ -539,7 +540,7 @@ function MeasurementSection(props: {
                         Essayage en atelier
                       </div>
                       <div className="text-xs text-foreground/65 mt-0.5">
-                        Quartier Salam, Agadir · sur rendez-vous
+                        {ADRESSE_ATELIER} · sur rendez-vous
                       </div>
                     </div>
                   </label>

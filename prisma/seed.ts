@@ -245,17 +245,21 @@ async function main() {
 
   // ===== Contenu éditorial =====
   const contenus = [
-    { cle: "histoire_texte", valeur: "Née à Agadir au cœur de Quartier Salam, la maison NADIRA perpétue depuis trois générations l'art ancestral de la couture marocaine. Chaque pièce est une conversation entre la brodeuse et le tissu, entre le geste transmis et l'inspiration du moment. Nos caftans et takchitas ne sont pas des vêtements : ce sont des héritages que l'on porte." },
+    { cle: "histoire_texte", valeur: "Née à Agadir, rue Iligh, la maison NADIRA perpétue depuis trois générations l'art ancestral de la couture marocaine. Chaque pièce est une conversation entre la brodeuse et le tissu, entre le geste transmis et l'inspiration du moment. Nos caftans et takchitas ne sont pas des vêtements : ce sont des héritages que l'on porte." },
     { cle: "histoire_accroche", valeur: "Trois générations de mains qui brodent l'âme du Maroc." },
     { cle: "hero_accroche", valeur: "L'art de la couture marocaine, façonné pour vous." },
-    { cle: "atelier_texte", valeur: "Dans notre atelier de Agadir, douze artisans perpétuent chaque jour des gestes vieux de plusieurs siècles. Le point de Agadir, la sfifa, l'aakad, le rabat — autant de techniques que nous préservons et transmettons aux jeunes générations. La broderie main reste notre signature : un caftan peut demander jusqu'à 200 heures de travail." },
-    { cle: "contact_adresse", valeur: "Quartier Salam, Agadir" },
-    { cle: "contact_maps", valeur: "https://maps.apple/p/osTsur6u9BnDAr" },
+    { cle: "atelier_texte", valeur: "Dans notre atelier du 26 rue Iligh à Agadir, douze artisans perpétuent chaque jour des gestes vieux de plusieurs siècles. Le point de Agadir, la sfifa, l'aakad, le rabat — autant de techniques que nous préservons et transmettons aux jeunes générations. La broderie main reste notre signature : un caftan peut demander jusqu'à 200 heures de travail." },
+    { cle: "contact_adresse", valeur: "26 Rue Iligh, Agadir 80000" },
+    { cle: "contact_maps", valeur: "https://www.google.com/maps/search/?api=1&query=26%20Rue%20Iligh%2C%20Agadir%2080000%2C%20Maroc" },
     { cle: "contact_email", valeur: "couture.nadira2026@gmail.com" },
+    { cle: "contact_telephone", valeur: "" },
     { cle: "contact_horaires", valeur: "Tous les jours, toute l'année · 10h00–23h00" },
     { cle: "citation_1", valeur: "« Le fil d'or ne ment pas : il garde la mémoire des mains qui l'ont tiré. »" },
     { cle: "citation_2", valeur: "« Un caftan n'est jamais terminé. Il s'endort et se réveille avec celle qui le porte. »" },
     { cle: "reseaux_instagram", valeur: "https://www.instagram.com/couture_nadira?igsh=bjZneDIzMGVudHBn" },
+    { cle: "reseaux_tiktok", valeur: "" },
+    { cle: "reseaux_facebook", valeur: "" },
+    { cle: "reseaux_whatsapp", valeur: "" },
   ];
   for (const c of contenus) {
     await db.contenu.upsert({
