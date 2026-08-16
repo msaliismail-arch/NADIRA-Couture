@@ -25,6 +25,28 @@ export function mapsUrl(adresse: string): string {
 }
 
 /**
+ * URL d'aperçu de carte, à placer dans une iframe.
+ * Utilise l'embed Google Maps, qui ne demande aucune clé d'API.
+ */
+export function mapsEmbedUrl(adresse: string): string {
+  const query = encodeURIComponent(
+    `${(adresse || "").trim() || ADRESSE_ATELIER}, Maroc`
+  );
+  return `https://www.google.com/maps?q=${query}&z=14&output=embed`;
+}
+
+/**
+ * Lien « Voir l'itinéraire » : ouvre Google Maps en mode navigation,
+ * depuis la position du visiteur jusqu'à l'atelier.
+ */
+export function mapsDirectionsUrl(adresse: string): string {
+  const query = encodeURIComponent(
+    `${(adresse || "").trim() || ADRESSE_ATELIER}, Maroc`
+  );
+  return `https://www.google.com/maps/dir/?api=1&destination=${query}`;
+}
+
+/**
  * Résout l'adresse et le lien carte à afficher sur le site public.
  * - `contact_adresse` vide → adresse de l'atelier par défaut.
  * - `contact_maps` vide → lien Google Maps généré depuis l'adresse.

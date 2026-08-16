@@ -49,6 +49,49 @@ export const SOCIAL_ICON: Record<
 };
 
 /**
+ * Tuiles carrées arrondies — le bloc « Suivez-nous ».
+ * Un réseau non renseigné en admin n'apparaît pas du tout.
+ */
+export function SocialTiles({
+  links,
+  className = "",
+  variant = "dark",
+}: {
+  links: { key: SocialKey; label: string; href: string }[];
+  className?: string;
+  /** `dark` sur fond velours (bas de page), `light` sur fond papier. */
+  variant?: "dark" | "light";
+}) {
+  if (links.length === 0) return null;
+
+  const tile =
+    variant === "dark"
+      ? "bg-white/5 border-gold/25 text-gold-light hover:bg-gold/20 hover:border-gold/60"
+      : "bg-emerald-deep/5 border-gold/30 text-emerald-deep hover:bg-gold/15 hover:border-gold/60";
+
+  return (
+    <div className={`flex flex-wrap gap-3 ${className}`}>
+      {links.map((l) => {
+        const Icon = SOCIAL_ICON[l.key];
+        return (
+          <a
+            key={l.key}
+            href={l.href}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={l.label}
+            title={l.label}
+            className={`h-12 w-12 rounded-2xl border flex items-center justify-center transition-all duration-200 hover:-translate-y-0.5 ${tile}`}
+          >
+            <Icon className="h-5 w-5" />
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * Rangée d'icônes rondes cliquables (footer, page contact…).
  */
 export function SocialIconRow({

@@ -2,7 +2,8 @@
 
 import { useStore } from "@/lib/store";
 import { NadiraMedallion, GoldDivider, KhatimStar } from "./brand";
-import { SOCIAL_ICON } from "./social-icons";
+import { SOCIAL_ICON, SocialTiles } from "./social-icons";
+import { MapPreview } from "./map-preview";
 import { getSocialLinks } from "@/lib/socials";
 import { getAdresse } from "@/lib/maps";
 import { Mail, MapPin } from "lucide-react";
@@ -110,26 +111,25 @@ export function Footer({ contenu }: { contenu: Record<string, string> }) {
               <KhatimStar className="h-3 w-3" /> Atelier
             </h3>
             <p className="text-sm text-ivory/75 leading-relaxed">{contenu.contact_horaires}</p>
+
+            {/* Suivez-nous — tuiles cliquables, masquées si non renseignées */}
             {socials.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-3">
-                {socials.map((s) => {
-                  const Icon = SOCIAL_ICON[s.key];
-                  return (
-                    <a
-                      key={s.key}
-                      href={s.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="h-9 w-9 rounded-full border border-gold/30 flex items-center justify-center text-gold-light hover:bg-gold/15 hover:border-gold/60 transition-colors"
-                      aria-label={s.label}
-                      title={s.label}
-                    >
-                      <Icon className="h-4 w-4" />
-                    </a>
-                  );
-                })}
-              </div>
+              <>
+                <h3 className="text-gold-light text-xs tracking-[0.25em] uppercase mt-8 mb-4">
+                  Suivez-nous
+                </h3>
+                <SocialTiles links={socials} variant="dark" />
+              </>
             )}
+
+            {/* Aperçu de carte + itinéraire */}
+            <MapPreview
+              adresse={adresse}
+              mapsLink={mapsLink}
+              variant="dark"
+              className="mt-8"
+              height="h-44"
+            />
           </div>
 
           {/* Newsletter / admin */}

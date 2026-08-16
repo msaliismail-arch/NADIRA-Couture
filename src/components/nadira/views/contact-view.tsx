@@ -18,9 +18,10 @@ import {
   KhatimStar,
   GoldDivider,
 } from "@/components/nadira/brand";
-import { SOCIAL_ICON } from "@/components/nadira/social-icons";
+import { SOCIAL_ICON, SocialTiles } from "@/components/nadira/social-icons";
 import { getSocialLinks, type SocialLink } from "@/lib/socials";
 import { getAdresse } from "@/lib/maps";
+import { MapPreview } from "@/components/nadira/map-preview";
 import { useReveal } from "@/hooks/use-reveal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -266,24 +267,7 @@ function ContactInfo({
         <p className="text-xs uppercase tracking-[0.25em] text-gold-deep mb-3">
           Suivez la maison
         </p>
-        <div className="flex flex-wrap gap-3">
-          {socials.map((s) => {
-            const Icon = SOCIAL_ICON[s.key];
-            return (
-              <a
-                key={s.key}
-                href={s.href}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={s.label}
-                title={s.label}
-                className="h-11 w-11 rounded-full border border-gold/40 flex items-center justify-center text-emerald-deep hover:bg-gold/10 hover:border-gold/70 transition-colors"
-              >
-                <Icon className="h-5 w-5" />
-              </a>
-            );
-          })}
-        </div>
+        <SocialTiles links={socials} variant="light" />
       </div>
     </div>
   );
@@ -538,57 +522,39 @@ function MapCard({
         <div
           ref={ref}
           className={cn(
-            "relative overflow-hidden rounded-2xl border-2 border-gold/30 velvet-deep reveal",
+            "overflow-hidden rounded-2xl border-2 border-gold/30 velvet-deep p-6 sm:p-8 reveal",
             visible && "in-view"
           )}
         >
-          <div className="aspect-[16/9] sm:aspect-[21/9] relative">
-            {/* Watermark pattern */}
-            <div className="absolute inset-0 pointer-events-none opacity-[0.08]">
-              <KhatimStar className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-72 w-72 text-gold khatim-spin" />
-            </div>
-            {/* Grid lines to evoke a map */}
-            <svg className="absolute inset-0 h-full w-full opacity-15" aria-hidden>
-              <defs>
-                <pattern id="map-grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#E3C879" strokeWidth="0.5" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#map-grid)" />
-              {/* Faux roads */}
-              <path d="M 0 60 Q 200 80 400 60 T 800 80" stroke="#C9A24B" strokeWidth="1.5" fill="none" opacity="0.6" />
-              <path d="M 100 0 Q 120 100 100 200 T 120 400" stroke="#C9A24B" strokeWidth="1" fill="none" opacity="0.5" />
-              <path d="M 300 0 L 320 400" stroke="#C9A24B" strokeWidth="0.8" fill="none" opacity="0.4" />
-            </svg>
-
-            {/* Center pin */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
-              <div className="relative">
-                <KhatimStar className="h-16 w-16 text-gold animate-pulse" strokeWidth={1.2} />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <MapPin className="h-6 w-6 text-gold-light" />
-                </div>
+          <div className="flex flex-col items-center text-center">
+            <div className="relative">
+              <KhatimStar className="h-14 w-14 text-gold" strokeWidth={1.2} />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-gold-light" />
               </div>
-              <p className="mt-4 text-xs uppercase tracking-[0.3em] text-gold-light/80">
-                Atelier NADIRA
-              </p>
-              <a
-                href={mapsLink}
-                target="_blank"
-                rel="noreferrer"
-                title={`Ouvrir « ${adresse} » dans Google Maps`}
-                className="mt-2 font-serif-alt text-xl sm:text-2xl text-ivory italic max-w-md underline decoration-gold/50 decoration-1 underline-offset-4 hover:text-gold-light hover:decoration-gold transition-colors"
-              >
-                {adresse}
-              </a>
-              <Button asChild className="mt-6 bg-gold text-emerald-deep hover:bg-gold-light">
-                <a href={mapsLink} target="_blank" rel="noreferrer">
-                  <MapPin className="h-4 w-4" />
-                  Voir sur la carte
-                </a>
-              </Button>
             </div>
+            <p className="mt-3 text-xs uppercase tracking-[0.3em] text-gold-light/80">
+              Atelier NADIRA
+            </p>
+            <a
+              href={mapsLink}
+              target="_blank"
+              rel="noreferrer"
+              title={`Ouvrir \u00ab\u00a0${adresse}\u00a0\u00bb dans Google Maps`}
+              className="mt-2 font-serif-alt text-xl sm:text-2xl text-ivory italic underline decoration-gold/50 decoration-1 underline-offset-4 hover:text-gold-light hover:decoration-gold transition-colors"
+            >
+              {adresse}
+            </a>
           </div>
+
+          {/* Vraie carte + itin\u00e9raire */}
+          <MapPreview
+            adresse={adresse}
+            mapsLink={mapsLink}
+            variant="dark"
+            className="mt-6"
+            height="h-72 sm:h-96"
+          />
         </div>
       </div>
     </section>
